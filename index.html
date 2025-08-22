@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'">
+<script src="/public/feed.js" defer></script>
+
+  <title>KRN — Anonymous Complaint</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <main class="container grid">
+    <section>
+      <h1>$KRN on $SUI</h1>
+      <p class="muted">Submit an anonymous complaint. No names; no emails; no tracking.</p>
+
+      <form method="post" action="/submit" class="card">
+        <label class="hp" aria-hidden="true">Leave this field empty
+          <input type="text" name="website" tabindex="-1" autocomplete="off">
+        </label>
+
+        <label for="message">Your complaint</label>
+        <textarea id="message" name="message" rows="8" maxlength="5000" required
+                  placeholder="Write clearly. Do not include personal identifiers."></textarea>
+
+        <button type="submit">Submit</button>
+        <p class="muted s">By submitting, you agree not to include PII or unlawful content.</p>
+      </form>
+    </section>
+
+    <aside>
+      <h2 class="h-sm">Recent complaints</h2>
+      <div id="feed" class="card feed">
+        <div class="muted s">Loading…</div>
+      </div>
+    </aside>
+  </main>
+</body>
+</html>
