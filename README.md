@@ -1,5 +1,3 @@
-Perfect. Since you now have two repos (`krn` = Pages frontend + functions, `krnsui` = worker scaffolding that is no longer needed), the README for **`krn`** should explain:
-
 * What the project is (anonymous complaint board on Sui, Cloudflare Pages + D1).
 * How to run locally.
 * How to deploy.
@@ -118,6 +116,3 @@ npx wrangler pages dev ./public --local
 
 MIT License.
 
----
-
-Do you want me to also draft a **short README for the `krnsui` repo** (to mark it archived/unused), so nobody confuses it with the real project?
