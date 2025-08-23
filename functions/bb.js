@@ -11,78 +11,33 @@ export async function onRequest({ request, env }) {
 
     const urlIn = new URL(request.url);
     const hours = parseInt(urlIn.searchParams.get("hours") || "24", 10);
-    const limit = Math.max(50, Math.min(500, hours * 20)); // heuristic: ~20 tx/hour
+    const limit = Math.max(50, Math.min(500, hours * 20)); // ~20 tx/hour heuristic
 
-    // We’ll try several endpoint patterns until one succeeds (200 OK)
-    const paths = [
-      // 1) often seen
-      (base) =>
-        withQS(
-          `${base}/sui/v1/transactions/by-coin-type`,
-          { network: "mainnet", coinType, page: "1", limit: String(limit) }
-        ),
-      // 2) coins/{coinType}/transactions
-      (base) =>
-        withQS(
-          `${base}/sui/v1/coins/${encodeURIComponent(coinType)}/transactions`,
-          { network: "mainnet", page: "1", limit: String(limit) }
-        ),
-      // 3) coin/{coinType}/transactions (singular)
-      (base) =>
-        withQS(
-          `${base}/sui/v1/coin/${encodeURIComponent(coinType)}/transactions`,
-          { network: "mainnet", page: "1", limit: String(limit) }
-        ),
-    ];
+    // Use the documented endpoint: GET /sui/v1/transactions/by-coin-type
+    const url = new URL("https://api.blockberry.one/sui/v1/transactions/by-coin-type");
+    url.searchParams.set("network", "mainnet");
+    url.searchParams.set("coinType", coinType);
+    url.searchParams.set("page", "1");
+    url.searchParams.set("size", String(limit));
 
-    const base = "https://api.blockberry.one";
-    let lastErrorText = "";
-    let raw;
+    const res = await fetch(url, {
+      headers: {
+        accept: "application/json",
+        "x-api-key": env.BB_API_KEY,
+      },
+    });
 
-    for (const makeUrl of paths) {
-      const url = makeUrl(base);
-      const res = await fetch(url, {
-        headers: {
-          accept: "application/json",
-          "x-api-key": env.BB_API_KEY,
-        },
-      });
-
-      const text = await res.text();
-      // keep the most recent body for debugging if we fail
-      lastErrorText = `status=${res.status} body=${truncate(text, 400)}`;
-
-      if (!res.ok) {
-        // try next pattern
-        continue;
-      }
-
-      try {
-        raw = JSON.parse(text);
-      } catch {
-        return json({
-          ok: false,
-          error: "Upstream returned non-JSON",
-          details: lastErrorText,
-        }, 502);
-      }
-
-      // got something OK; break out
-      break;
+    const text = await res.text();
+    if (!res.ok) {
+      return json(
+        { ok: false, error: `Upstream ${res.status}`, details: text.slice(0, 300) },
+        res.status
+      );
     }
 
-    if (!raw) {
-      return json({
-        ok: false,
-        error: "Upstream 4xx/5xx",
-        details: lastErrorText,
-      }, 502);
-    }
+    const raw = JSON.parse(text);
 
-    // Normalize items array out of common shapes:
-    // - { data: [...] }
-    // - { list: [...] }
-    // - [ ... ]
+    // Normalize items from common shapes: {data: [...]}, {list: [...]}, or [...]
     const items = Array.isArray(raw?.data)
       ? raw.data
       : Array.isArray(raw?.list)
@@ -93,7 +48,7 @@ export async function onRequest({ request, env }) {
 
     const cutoff = Date.now() - hours * 3600 * 1000;
 
-    // Bucket counts by hour (ts may be in different fields / units)
+    // Bucket by hour
     const buckets = new Map(); // hourStartMs -> count
     for (const it of items) {
       const ts = pickTimestampMs(it);
@@ -102,7 +57,7 @@ export async function onRequest({ request, env }) {
       buckets.set(hourStart, (buckets.get(hourStart) || 0) + 1);
     }
 
-    // Build continuous hourly series, return ISO labels so your chart pretty-printer works
+    // Build continuous hourly series (ISO labels so your chart code can format)
     const labels = [];
     const series = [];
     const start = Math.floor(cutoff / 3600000) * 3600000;
@@ -111,7 +66,6 @@ export async function onRequest({ request, env }) {
       series.push(buckets.get(t) || 0);
     }
 
-    // Optional: debug passthrough
     if (urlIn.searchParams.get("debug") === "1") {
       return json({ ok: true, labels, series, rawPreview: preview(raw) });
     }
@@ -124,20 +78,14 @@ export async function onRequest({ request, env }) {
 
 /* ---------------- helpers ---------------- */
 
-function withQS(base, q) {
-  const u = new URL(base);
-  for (const [k, v] of Object.entries(q)) u.searchParams.set(k, v);
-  return u.toString();
-}
-
 function pickTimestampMs(it) {
-  // Try a handful of common fields; convert to ms if needed
+  // Try several possible fields; convert seconds -> ms if needed
   const candidates = [
     it.timestamp,
+    it.timestampMs,
     it.time,
     it.createdAt,
     it.created_at,
-    it.timestampMs,
     it.checkpointTimestampMs,
     it.executedTimeMs,
   ];
@@ -145,32 +93,24 @@ function pickTimestampMs(it) {
   for (const v of candidates) {
     if (v == null) continue;
 
-    // ISO / string date
-    if (typeof v === "string") {
-      const n = Date.parse(v);
-      if (!Number.isNaN(n)) return n;
-      // string number?
-      const nn = Number(v);
-      if (Number.isFinite(nn)) {
-        return nn > 1e12 ? nn : nn * 1000;
-      }
-    }
-
-    // numeric seconds or ms
     if (typeof v === "number" && Number.isFinite(v)) {
-      return v > 1e12 ? v : v * 1000;
+      return v > 1e12 ? v : v * 1000; // seconds -> ms
+    }
+    if (typeof v === "string") {
+      const n = Number(v);
+      if (Number.isFinite(n)) return n > 1e12 ? n : n * 1000;
+      const iso = Date.parse(v);
+      if (!Number.isNaN(iso)) return iso;
     }
   }
   return null;
 }
 
-function truncate(s, n) {
-  return s.length > n ? s.slice(0, n) + "…" : s;
-}
-
 function preview(obj) {
   try {
-    return JSON.parse(JSON.stringify(obj, (_k, v) => (typeof v === "string" && v.length > 120 ? v.slice(0, 120) + "…" : v)));
+    return JSON.parse(
+      JSON.stringify(obj, (_k, v) => (typeof v === "string" && v.length > 120 ? v.slice(0, 120) + "…" : v))
+    );
   } catch {
     return obj;
   }
