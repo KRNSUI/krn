@@ -13,7 +13,7 @@
 ## 🌐 Website
 👉 [Anonymous KUMplaint Platform](https://krn.fuck-out.com)
 
-- Submit complaints anonymously.
+- Submit KUMplaints anonymously.
 - Recent KUMplaints are displayed publicly.
 - Integrated live chart of the $KRN token on Sui.
 
@@ -54,7 +54,7 @@ The KRN project and its maintainers:
 ## 🛠️ Development
 This project is built with:
 - **Cloudflare Pages** (static hosting)  
-- **Cloudflare Workers & D1** (serverless + database for complaints)  
+- **Cloudflare Workers & D1** (serverless + database for KUMplaints)  
 - **Vanilla HTML, CSS, JS** (no Node build required)
 
 ### Local Preview
