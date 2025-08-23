@@ -3,10 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'">
-<script src="/public/feed.js" defer></script>
+  <meta name="description" content="KRN — Anonymous KUMplaints on Sui. No names, no emails, no tracking." />
+  <meta property="og:title" content="KRN — Anonymous KUMplaint" />
+  <meta property="og:description" content="Drop anonymous KUMplaints. Edge-native. $KRN on Sui." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://krn.fuck-out.com/" />
 
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 img-src 'self' data: https://pbs.twimg.com https://img.shields.io;
+                 style-src 'self' 'unsafe-inline';
+                 script-src 'self';
+                 frame-src https://suiscan.xyz;
+                 object-src 'none';
+                 base-uri 'none';
+                 form-action 'self'">
+
+  <script src="/public/feed.js" defer></script>
   <title>KRN — Anonymous KUMplaint</title>
   <link rel="stylesheet" href="/public/styles.css">
 </head>
@@ -23,11 +36,31 @@
 
         <label for="message">Your complaint</label>
         <textarea id="message" name="message" rows="8" maxlength="5000" required
+                  aria-describedby="msg-help"
                   placeholder="Write clearly. Do not include personal identifiers."></textarea>
+        <p id="msg-help" class="muted s">By submitting, you agree not to include PII or unlawful content.</p>
 
         <button type="submit">Submit</button>
-        <p class="muted s">By submitting, you agree not to include PII or unlawful content.</p>
       </form>
+    </section>
+
+    <!-- Live Chart panel spans both columns on desktop -->
+    <section class="card wide-2">
+      <h2 class="h-sm">Live Chart ($KRN on Sui)</h2>
+      <div class="chart-wrap">
+        <iframe
+          title="KRN on Suiscan"
+          src="https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+          allowfullscreen
+        ></iframe>
+      </div>
+      <p class="muted s">
+        If the chart doesn’t render in your browser,
+        <a class="btn" href="https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs" target="_blank" rel="noopener">open it on Suiscan</a>.
+      </p>
     </section>
 
     <aside>
