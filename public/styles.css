@@ -15,8 +15,7 @@ textarea { width:100%; padding:0.75rem; border-radius:10px; border:1px solid #2a
 button, .btn { display:inline-block; margin-top:0.75rem; padding:0.7rem 1rem; border-radius:12px; border:0; background:var(--accent); color:#001018; font-weight:700; text-decoration:none; cursor:pointer; }
 .hp { position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden; }
 
-/* feed */
-.feed { max-height: 70vh; overflow:auto; }
+/* feed items */
 .item { padding:.6rem .2rem; border-bottom:1px solid #232734; }
 .item:last-child { border-bottom:0; }
 .time { font-size:.8rem; color:var(--muted); margin-bottom:.25rem; }
@@ -27,20 +26,44 @@ button, .btn { display:inline-block; margin-top:0.75rem; padding:0.7rem 1rem; bo
 .chart-wrap iframe { width: 100%; height: 100%; border: 0; background: #0e1116; }
 .btn { display:inline-block; margin-top:.5rem; padding:.6rem .9rem; border-radius:12px; background:var(--accent); color:#001018; font-weight:700; text-decoration:none; }
 
-/* ---- LAYOUT you requested ---- */
-/* 1-col by default; switch to 2-col at 700px */
+/* ---- LAYOUT ---- */
+/* 1-col by default */
 .krn-layout { display: grid; gap: 1.25rem; }
+
+/* Two-column layout at 700px+ */
 @media (min-width: 700px) {
   .krn-layout {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
       "form feed"
       "chart chart";
-    align-items: start;
+    align-items: stretch;   
+    grid-auto-rows: minmax(0, auto);
   }
-  .form-col  { grid-area: form; }
-  .feed-col  { grid-area: feed; position: sticky; top: 1rem; height: fit-content; }
+
+  .form-col  { grid-area: form; display:flex; flex-direction:column; }
+  .feed-col  { grid-area: feed; display:flex; flex-direction:column; }
   .chart-col { grid-area: chart; }
+}
+
+/* Form column should visually match the feed column height.*/
+@media (min-width: 700px) {
+  .form-col .card {
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Feed card: fills its column, scrolls internally */
+@media (min-width: 700px) {
+  .feed {
+    height: 100%;
+    max-height: 70vh;
+    overflow: auto; 
+    border-radius: 14px;
+    background: var(--card);
+  }
 }
 
 /* a11y focus */
