@@ -1,28 +1,53 @@
-export async function onRequest({ env }) {
-  const out = { hasBinding: !!env.KRN_DB };
+// functions/diag.js
+// GET /diag[?quick=1]
+export const onRequest = async ({ request, env }) => {
+  const url = new URL(request.url);
+  const quick = url.searchParams.get("quick") === "1";
+
+  const out = {
+    ok: true,
+    hasKrnDbBinding: !!env.KRN_DB,
+    hasBBApiKey: !!env.BB_API_KEY,
+  };
+
   try {
-    if (!env.KRN_DB) throw new Error("KRN_DB binding missing");
-    const t = await env.KRN_DB.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table'"
-    ).all();
-    out.tables = (t.results || []).map(x => x.name);
-    const c = await env.KRN_DB.prepare(
-      "SELECT COUNT(*) AS n FROM complaints"
-    ).all();
-    out.complaintsCount = c.results?.[0]?.n ?? 0;
-    return new Response(JSON.stringify(out, null, 2), {
-      headers: { "content-type": "application/json" }
-    });
+    if (!env.KRN_DB) {
+      out.ok = false;
+      out.error = "KRN_DB binding missing";
+      return json(out, 500);
+    }
+
+    // quick mode: just bindings
+    if (quick) return json(out);
+
+    // deeper DB checks (safe, optional)
+    const tables = await env.KRN_DB
+      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .all();
+    out.tables = (tables.results || []).map(r => r.name);
+
+    // complaints count (if table exists)
+    if (out.tables.includes("complaints")) {
+      const cnt = await env.KRN_DB
+        .prepare("SELECT COUNT(*) AS n FROM complaints")
+        .all();
+      out.complaintsCount = cnt.results?.[0]?.n ?? 0;
+    } else {
+      out.complaintsCount = 0;
+      out.note = "complaints table not found";
+    }
+
+    return json(out);
   } catch (e) {
+    out.ok = false;
     out.error = String(e);
-    return new Response(JSON.stringify(out, null, 2), {
-      status: 500, headers: { "content-type": "application/json" }
-    });
+    return json(out, 500);
   }
-}
-export const onRequest = async ({ env }) => {
-  const hasKey = !!env.BB_API_KEY;
-  return new Response(JSON.stringify({ ok: true, hasBBApiKey: hasKey }), {
-    headers: { "content-type": "application/json" },
-  });
 };
+
+function json(obj, status = 200, headers = {}) {
+  return new Response(JSON.stringify(obj, null, 2), {
+    status,
+    headers: { "content-type": "application/json", ...headers },
+  });
+}
