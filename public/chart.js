@@ -2,15 +2,17 @@
 (function () {
   const $ = (sel) => document.querySelector(sel);
 
-  async function load() {
-    try {
-      const r = await fetch("/bb?hours=24&size=10", { cache: "no-store" });
-      const data = await r.json();
+async function loadTxSeries(hours = 24) {
+  // Use your Cloudflare function proxy:
+  const r = await fetch(`/bb?hours=${hours}`, { cache: "no-store" });
+  const data = await r.json();
+  if (!r.ok || !data?.ok) {
+    console.warn("tx warning:", data);
+    return { labels: [], series: [] };
+  }
+  return { labels: data.labels || [], series: data.series || [] };
+}
 
-      if (!data.ok) {
-        renderError(data.error || "Failed to load /bb");
-        return;
-      }
 
       // --- coin basics ---
       const name = data.coin?.name ?? "KRN";
