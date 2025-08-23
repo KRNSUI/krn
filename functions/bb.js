@@ -5,39 +5,44 @@ export async function onRequest({ request, env }) {
       return json({ ok: false, error: "Missing BB_API_KEY binding" }, 500);
     }
 
-    // --- config ---
+    // config
     const coinType =
       "0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN";
 
     const urlIn = new URL(request.url);
     const hours = parseInt(urlIn.searchParams.get("hours") || "24", 10);
-    const limit = Math.max(50, Math.min(500, hours * 20)); // ~20 tx/hour heuristic
+    const size = Math.max(50, Math.min(500, hours * 20)); // ~20 tx/hour heuristic
+    const page = 1;
 
-    // Use the documented endpoint: GET /sui/v1/transactions/by-coin-type
-    const url = new URL("https://api.blockberry.one/sui/v1/transactions/by-coin-type");
-    url.searchParams.set("network", "mainnet");
-    url.searchParams.set("coinType", coinType);
-    url.searchParams.set("page", "1");
-    url.searchParams.set("size", String(limit));
+    // Correct Blockberry endpoint (POST)
+    // Docs: getTransactionsByCoinType → POST /sui/v1/coins/{coinType}/transactions
+    const url = `https://api.blockberry.one/sui/v1/coins/${encodeURIComponent(coinType)}/transactions`;
 
-    const res = await fetch(url, {
+    const upstream = await fetch(url, {
+      method: "POST",
       headers: {
-        accept: "application/json",
+        "accept": "application/json",
+        "content-type": "application/json",
         "x-api-key": env.BB_API_KEY,
       },
+      // Some Blockberry endpoints expect pagination in the body
+      body: JSON.stringify({ page, size }),
     });
 
-    const text = await res.text();
-    if (!res.ok) {
+    const text = await upstream.text();
+    if (!upstream.ok) {
+      // surface upstream details to your canvas error
       return json(
-        { ok: false, error: `Upstream ${res.status}`, details: text.slice(0, 300) },
-        res.status
+        { ok: false, error: `Upstream ${upstream.status}`, details: text.slice(0, 400) },
+        upstream.status
       );
     }
 
-    const raw = JSON.parse(text);
+    let raw;
+    try { raw = JSON.parse(text); }
+    catch { return json({ ok: false, error: "Non-JSON response", preview: text.slice(0, 160) }, 502); }
 
-    // Normalize items from common shapes: {data: [...]}, {list: [...]}, or [...]
+    // Accept common shapes: {data:[...]}, {list:[...]}, or [...]
     const items = Array.isArray(raw?.data)
       ? raw.data
       : Array.isArray(raw?.list)
@@ -57,7 +62,7 @@ export async function onRequest({ request, env }) {
       buckets.set(hourStart, (buckets.get(hourStart) || 0) + 1);
     }
 
-    // Build continuous hourly series (ISO labels so your chart code can format)
+    // Build continuous hourly series; ISO labels work well with your chart code
     const labels = [];
     const series = [];
     const start = Math.floor(cutoff / 3600000) * 3600000;
@@ -67,7 +72,7 @@ export async function onRequest({ request, env }) {
     }
 
     if (urlIn.searchParams.get("debug") === "1") {
-      return json({ ok: true, labels, series, rawPreview: preview(raw) });
+      return json({ ok: true, labels, series, sample: preview(items.slice(0, 3)) });
     }
 
     return json({ ok: true, labels, series });
@@ -76,29 +81,20 @@ export async function onRequest({ request, env }) {
   }
 }
 
-/* ---------------- helpers ---------------- */
+/* ---------- helpers ---------- */
 
 function pickTimestampMs(it) {
-  // Try several possible fields; convert seconds -> ms if needed
+  // Try several possible fields; convert seconds → ms if needed
   const candidates = [
-    it.timestamp,
-    it.timestampMs,
-    it.time,
-    it.createdAt,
-    it.created_at,
-    it.checkpointTimestampMs,
-    it.executedTimeMs,
+    it.timestampMs, it.timestamp_ms, it.checkpointTimestampMs, it.executedTimeMs,
+    it.timestamp, it.time, it.createdAt, it.created_at
   ];
-
   for (const v of candidates) {
     if (v == null) continue;
-
-    if (typeof v === "number" && Number.isFinite(v)) {
-      return v > 1e12 ? v : v * 1000; // seconds -> ms
-    }
+    if (typeof v === "number") return v > 1e12 ? v : v * 1000;
     if (typeof v === "string") {
-      const n = Number(v);
-      if (Number.isFinite(n)) return n > 1e12 ? n : n * 1000;
+      const num = Number(v);
+      if (Number.isFinite(num)) return num > 1e12 ? num : num * 1000;
       const iso = Date.parse(v);
       if (!Number.isNaN(iso)) return iso;
     }
@@ -108,12 +104,8 @@ function pickTimestampMs(it) {
 
 function preview(obj) {
   try {
-    return JSON.parse(
-      JSON.stringify(obj, (_k, v) => (typeof v === "string" && v.length > 120 ? v.slice(0, 120) + "…" : v))
-    );
-  } catch {
-    return obj;
-  }
+    return JSON.parse(JSON.stringify(obj, (_k, v) => (typeof v === "string" && v.length > 120 ? v.slice(0, 120) + "…" : v)));
+  } catch { return obj; }
 }
 
 function json(body, status = 200) {
