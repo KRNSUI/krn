@@ -20,3 +20,9 @@ export async function onRequest({ env }) {
     });
   }
 }
+export const onRequest = async ({ env }) => {
+  const hasKey = !!env.BB_API_KEY;
+  return new Response(JSON.stringify({ ok: true, hasBBApiKey: hasKey }), {
+    headers: { "content-type": "application/json" },
+  });
+};

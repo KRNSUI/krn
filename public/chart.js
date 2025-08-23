@@ -15,15 +15,16 @@
   ctx.scale(ratio, ratio);
 
   // fetch time-series (server-proxied)
-  let data;
-  try {
-    const res = await fetch(`/chain-txs?coinType=${encodeURIComponent(COIN)}&limit=400`, { cache: "no-store" });
-    data = await res.json();
-    if (!data || !Array.isArray(data.points)) throw new Error("Bad data");
-  } catch (e) {
-    drawError(ctx, W, H, e);
-    return;
-  }
+let data;
+try {
+  const res = await fetch(`/chain-txs?coinType=${encodeURIComponent(COIN)}&limit=400`, { cache: "no-store" });
+  data = await res.json();
+  if (!res.ok) throw new Error(`Upstream ${data.upstreamStatus || res.status}: ${data.error || "unknown"}`);
+  if (!data || !Array.isArray(data.points)) throw new Error("Bad data");
+} catch (e) {
+  drawError(ctx, W, H, e);
+  return;
+}
 
   const points = data.points;
   const values = points.map(p => p.c);
