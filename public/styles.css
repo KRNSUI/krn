@@ -242,3 +242,15 @@ textarea{ min-height:10rem }
   color: #fff;
   box-shadow: 0 0 10px var(--accent);
 }
+
+.grid-2 {
+  display: grid;
+  gap: 0.75rem 1rem;
+  grid-template-columns: 1fr 1fr;
+}
+.strong { font-weight: 700; }
+.holders { list-style: none; padding: 0; margin: .5rem 0 0; }
+.holders li { display:flex; justify-content:space-between; padding:.4rem 0; border-bottom:1px solid rgba(255,255,255,.06); }
+.holders li:last-child { border-bottom: 0; }
+.holders .addr { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 70%; }
+.holders .amt { font-weight:600; }
