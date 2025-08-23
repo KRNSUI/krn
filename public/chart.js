@@ -1,141 +1,177 @@
-(async function () {
-  const COIN =
-    "0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN";
+(function () {
+  const CANVAS_ID = "krnChart";
+  const ENDPOINT  = "/bb?hours=24";       // your Worker proxy route
+  const REFRESH_MS = 60_000;              // refresh every 60s
 
-  const el = document.getElementById("krnChart");
-  if (!el || !el.getContext) return;
-  const ctx = el.getContext("2d");
+  const canvas = document.getElementById(CANVAS_ID);
+  if (!canvas) return;
 
-  // DPI scaling for crispness
-  const ratio = window.devicePixelRatio || 1;
-  const W = el.clientWidth || 800;
-  const H = el.clientHeight || 240;
-  el.width = Math.floor(W * ratio);
-  el.height = Math.floor(H * ratio);
-  ctx.scale(ratio, ratio);
+  const ctx = canvas.getContext("2d");
 
-  // fetch time-series (server-proxied)
-let data;
-try {
-  const res = await fetch(`/chain-txs?coinType=${encodeURIComponent(COIN)}&limit=400`, { cache: "no-store" });
-  data = await res.json();
-  if (!res.ok) throw new Error(`Upstream ${data.upstreamStatus || res.status}: ${data.error || "unknown"}`);
-  if (!data || !Array.isArray(data.points)) throw new Error("Bad data");
-} catch (e) {
-  drawError(ctx, W, H, e);
-  return;
-}
+  // Theme: oranges
+  const COLORS = {
+    bgGrid: "rgba(255,165,0,.12)",
+    line:   "#ff9933",
+    fill1:  "rgba(255,153,51,.25)",
+    fill2:  "rgba(255,153,51,0)"
+  };
 
-  const points = data.points;
-  const values = points.map(p => p.c);
-  const times = points.map(p => p.t);
-  const minV = 0;
-  const maxV = Math.max(1, Math.max(...values)); // avoid flatline divide-by-zero
-
-  // padding & axes
-  const padL = 42, padR = 16, padT = 18, padB = 28;
-  const innerW = W - padL - padR;
-  const innerH = H - padT - padB;
-
-  // helpers
-  const xAt = (i) => padL + (i / Math.max(1, points.length - 1)) * innerW;
-  const yAt = (v) => padT + (1 - (v - minV) / Math.max(1, maxV - minV)) * innerH;
-
-  // clear
-  ctx.clearRect(0, 0, W, H);
-
-  // bg
-  ctx.fillStyle = getCss("--card", "#1c120b");
-  ctx.fillRect(0, 0, W, H);
-
-  // axes lines
-  ctx.strokeStyle = "rgba(255,255,255,0.08)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(padL, padT);
-  ctx.lineTo(padL, H - padB);
-  ctx.lineTo(W - padR, H - padB);
-  ctx.stroke();
-
-  // y grid (3 lines)
-  ctx.strokeStyle = "rgba(255,255,255,0.06)";
-  ctx.setLineDash([4, 6]);
-  for (let g = 1; g <= 3; g++) {
-    const y = padT + (g / 4) * innerH;
-    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
-  }
-  ctx.setLineDash([]);
-
-  // area under line
-  const grad = ctx.createLinearGradient(0, padT, 0, H - padB);
-  grad.addColorStop(0, hexWithAlpha(getCss("--accent", "#ff6a00"), 0.35));
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = grad;
-
-  ctx.beginPath();
-  for (let i = 0; i < points.length; i++) {
-    const x = xAt(i), y = yAt(values[i]);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.lineTo(W - padR, H - padB);
-  ctx.lineTo(padL, H - padB);
-  ctx.closePath();
-  ctx.fill();
-
-  // stroke line
-  ctx.strokeStyle = getCss("--accent-glow", "#ffae42");
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let i = 0; i < points.length; i++) {
-    const x = xAt(i), y = yAt(values[i]);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-
-  // y labels (0 and max)
-  ctx.fillStyle = "rgba(255,255,255,0.75)";
-  ctx.font = "12px system-ui, sans-serif";
-  ctx.textAlign = "right";
-  ctx.fillText(String(minV), padL - 6, H - padB + 4);
-  ctx.fillText(String(maxV), padL - 6, padT + 4);
-
-  // x labels (start / end times)
-  const start = new Date(times[0] || Date.now());
-  const end = new Date(times[times.length - 1] || Date.now());
-  ctx.textAlign = "center";
-  ctx.fillText(fmtTime(start), padL, H - 8);
-  ctx.fillText(fmtTime(end), W - padR, H - 8);
-
-  function fmtTime(d) {
-    const h = String(d.getHours()).padStart(2, "0");
-    const m = String(d.getMinutes()).padStart(2, "0");
-    return `${h}:${m}`;
-  }
-  function getCss(varName, fallback) {
-    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || fallback;
-  }
-  function hexWithAlpha(hex, alpha) {
-    // hex like #ff6a00
-    const c = hex.replace("#", "");
-    if (c.length !== 6) return `rgba(255,106,0,${alpha})`;
-    const r = parseInt(c.slice(0,2), 16);
-    const g = parseInt(c.slice(2,4), 16);
-    const b = parseInt(c.slice(4,6), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
+  // DPR-aware resize
+  function fitCanvas() {
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const { width, height } = canvas.getBoundingClientRect();
+    canvas.width  = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  function drawError(ctx, W, H, err) {
-    ctx.clearRect(0,0,W,H);
-    ctx.fillStyle = "#120e0b";
-    ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = "#ffae42";
-    ctx.font = "12px system-ui, sans-serif";
-    ctx.fillText("Chart error. Try again later.", 12, 20);
-    if (err) {
-      ctx.fillStyle = "rgba(255,255,255,.6)";
-      ctx.fillText(String(err).slice(0, 60), 12, 38);
+  function formatHourLabel(d) {
+    // show “HH:mm” or “M/D HH”
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+
+  // Accepts either:
+  // A) { ok:true, labels:[..], series:[..] }
+  // B) { ok:true, points:[{t: <ms|iso>, v:<number>}, ...] }
+  function normalizeData(json) {
+    if (!json) throw new Error("Empty response");
+    if (json.ok && Array.isArray(json.labels) && Array.isArray(json.series)) {
+      // already in labels/series shape
+      return { labels: json.labels, series: json.series.map(v => +v || 0) };
+    }
+    if (json.ok && Array.isArray(json.points)) {
+      const labels = [];
+      const series = [];
+      for (const p of json.points) {
+        const ts = typeof p.t === "number" ? p.t : Date.parse(p.t);
+        const d = new Date(ts);
+        labels.push(formatHourLabel(d));
+        series.push(+p.v || 0);
+      }
+      return { labels, series };
+    }
+    // Unknown shape (or error from proxy)
+    throw new Error(json.error || "Bad upstream data");
+  }
+
+  function drawChart({ labels, series }) {
+    // Layout
+    const pad = { top: 12, right: 12, bottom: 22, left: 36 };
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    if (W <= 0 || H <= 0) return;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const chartW = W - pad.left - pad.right;
+    const chartH = H - pad.top - pad.bottom;
+
+    // bounds
+    const minY = 0;
+    const maxY = Math.max(1, Math.max(...series) * 1.15);
+
+    // helpers
+    const xOf = i => pad.left + (series.length <= 1 ? 0 : (i * chartW) / (series.length - 1));
+    const yOf = v => pad.top + chartH - (v - minY) / (maxY - minY) * chartH;
+
+    // grid
+    ctx.strokeStyle = COLORS.bgGrid;
+    ctx.lineWidth = 1;
+
+    // horizontal grid lines (5)
+    const steps = 5;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const y = pad.top + (i * chartH) / steps;
+      ctx.moveTo(pad.left, y);
+      ctx.lineTo(W - pad.right, y);
+    }
+    ctx.stroke();
+
+    // y-axis labels
+    ctx.fillStyle = "rgba(255,255,255,.7)";
+    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i <= steps; i++) {
+      const val = (maxY * (1 - i / steps));
+      const y = pad.top + (i * chartH) / steps;
+      ctx.fillText(val.toFixed(0), pad.left - 8, y);
+    }
+
+    // x-axis labels (~6 ticks)
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const tickEvery = Math.max(1, Math.floor(labels.length / 6));
+    for (let i = 0; i < labels.length; i += tickEvery) {
+      const x = xOf(i);
+      const label = labels[i];
+      ctx.fillText(label, x, H - pad.bottom + 6);
+    }
+
+    // line fill gradient
+    const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+    grad.addColorStop(0, COLORS.fill1);
+    grad.addColorStop(1, COLORS.fill2);
+
+    // area fill
+    ctx.beginPath();
+    ctx.moveTo(xOf(0), yOf(series[0] || 0));
+    for (let i = 1; i < series.length; i++) ctx.lineTo(xOf(i), yOf(series[i]));
+    ctx.lineTo(xOf(series.length - 1), H - pad.bottom);
+    ctx.lineTo(xOf(0), H - pad.bottom);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // line
+    ctx.beginPath();
+    ctx.moveTo(xOf(0), yOf(series[0] || 0));
+    for (let i = 1; i < series.length; i++) ctx.lineTo(xOf(i), yOf(series[i]));
+    ctx.strokeStyle = COLORS.line;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "rgba(255,153,51,.35)";
+    ctx.shadowBlur = 12;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  function showError(msg) {
+    // Draw an error message inside the canvas
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(255,210,170,.9)";
+    ctx.font = "14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif";
+    const lines = [`Chart error. Try again later.`, String(msg)];
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    let y = 8;
+    for (const line of lines) {
+      ctx.fillText(line, 10, y);
+      y += 18;
     }
   }
+
+  async function loadAndRender() {
+    try {
+      fitCanvas();
+      const res = await fetch(ENDPOINT, { headers: { "accept": "application/json" } });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(`Upstream ${res.status}: ${JSON.stringify(json)}`);
+
+      const { labels, series } = normalizeData(json);
+      if (!labels?.length || !series?.length) throw new Error("Empty dataset");
+      drawChart({ labels, series });
+    } catch (err) {
+      showError(err.message || err);
+    }
+  }
+
+  // bootstrap
+  window.addEventListener("resize", () => loadAndRender());
+  loadAndRender();
+  setInterval(loadAndRender, REFRESH_MS);
 })();
