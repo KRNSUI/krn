@@ -14,7 +14,7 @@
 
   async function load() {
     try {
-      const r = await fetch("/complaints?limit=100", { cache: "no-store" });
+      const r = await fetch("/complaints?limit=120", { cache: "no-store" });
       const data = await r.json();
       if (!data.ok) throw new Error(data.error || "Failed to load complaints");
 
