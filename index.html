@@ -3,12 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- Meta (preview/SEO) -->
   <meta name="description" content="KRN — Anonymous KUMplaints on Sui. No names, no emails, no tracking." />
   <meta property="og:title" content="KRN — Anonymous KUMplaint" />
   <meta property="og:description" content="Drop anonymous KUMplaints. Edge-native. $KRN on Sui." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://krn.fuck-out.com/" />
 
+  <!-- CSP: allow our assets + Suiscan iframe + form POSTs -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self';
                  img-src 'self' data: https://pbs.twimg.com https://img.shields.io;
@@ -24,12 +27,14 @@
   <link rel="stylesheet" href="/public/styles.css">
 </head>
 <body>
-  <main class="container grid">
-    <section>
+  <main class="container krn-layout">
+    <!-- Left: form -->
+    <section class="form-col">
       <h1>$KRN on $SUI</h1>
       <p class="muted">Submit an anonymous KUMplaint. No names; no emails; no tracking.</p>
 
       <form method="post" action="/submit" class="card">
+        <!-- honeypot -->
         <label class="hp" aria-hidden="true">Leave this field empty
           <input type="text" name="website" tabindex="-1" autocomplete="off">
         </label>
@@ -44,8 +49,16 @@
       </form>
     </section>
 
-    <!-- Live Chart panel spans both columns on desktop -->
-    <section class="card wide-2">
+    <!-- Right: recent feed -->
+    <aside class="feed-col">
+      <h2 class="h-sm">Recent KUMplaints</h2>
+      <div id="feed" class="card feed">
+        <div class="muted s">Loading…</div>
+      </div>
+    </aside>
+
+    <!-- Bottom: full-width chart -->
+    <section class="card chart-col">
       <h2 class="h-sm">Live Chart ($KRN on Sui)</h2>
       <div class="chart-wrap">
         <iframe
@@ -58,17 +71,10 @@
         ></iframe>
       </div>
       <p class="muted s">
-        If the chart doesn’t render in your browser,
+        If the chart doesn’t render,
         <a class="btn" href="https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs" target="_blank" rel="noopener">open it on Suiscan</a>.
       </p>
     </section>
-
-    <aside>
-      <h2 class="h-sm">Recent KUMplaints</h2>
-      <div id="feed" class="card feed">
-        <div class="muted s">Loading…</div>
-      </div>
-    </aside>
   </main>
 </body>
 </html>

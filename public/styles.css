@@ -1,7 +1,7 @@
 :root { --bg:#0b0c10; --fg:#e6e6e6; --muted:#a8a8a8; --card:#151720; --accent:#6ee7ff; }
 * { box-sizing: border-box; }
 html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
-.container { max-width:720px; margin:0 auto; padding:2rem; }
+.container { max-width:960px; margin:0 auto; padding:2rem; } /* widened for the 2-col layout */
 .center { text-align:center; }
 h1 { margin:0 0 0.75rem; font-size:2rem; }
 .muted { color:var(--muted); }
@@ -12,11 +12,6 @@ textarea { width:100%; padding:0.75rem; border-radius:10px; border:1px solid #2a
 button, .btn { display:inline-block; margin-top:0.75rem; padding:0.7rem 1rem; border-radius:12px; border:0; background:var(--accent); color:#001018; font-weight:700; text-decoration:none; cursor:pointer; }
 .hp { position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden; }
 
-/* layout */
-.grid { display:grid; gap:1.25rem; grid-template-columns: 1fr; }
-@media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
-.h-sm { font-size:1.1rem; margin:0 0 .5rem; }
-
 /* feed */
 .feed { max-height: 70vh; overflow:auto; }
 .item { padding:.6rem .2rem; border-bottom:1px solid #232734; }
@@ -24,9 +19,27 @@ button, .btn { display:inline-block; margin-top:0.75rem; padding:0.7rem 1rem; bo
 .time { font-size:.8rem; color:var(--muted); margin-bottom:.25rem; }
 .msg { white-space:pre-wrap; word-wrap:break-word; }
 
+/* chart */
 .chart-wrap { position: relative; width: 100%; height: 420px; border-radius: 14px; overflow: hidden; }
 .chart-wrap iframe { width: 100%; height: 100%; border: 0; background: #0e1116; }
 .btn { display:inline-block; margin-top:.5rem; padding:.6rem .9rem; border-radius:12px; background:var(--accent); color:#001018; font-weight:700; text-decoration:none; }
+
+/* --- Enhancements --- */
+
+/* Layout: form | feed on top row, chart full width below */
+.krn-layout { display: grid; gap: 1.25rem; }
+@media (min-width: 900px) {
+  .krn-layout {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "form feed"
+      "chart chart";
+    align-items: start;
+  }
+  .form-col  { grid-area: form; }
+  .feed-col  { grid-area: feed; position: sticky; top: 1rem; height: fit-content; }
+  .chart-col { grid-area: chart; }
+}
 
 /* Better focus states (a11y) */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -43,17 +56,6 @@ button[disabled], .btn[aria-disabled="true"] { opacity: .6; cursor: not-allowed;
 
 /* Long text protection in messages */
 .msg { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
-
-/* Make the right panel stick on desktop so the feed stays visible while scrolling */
-@media (min-width: 900px) {
-  aside { position: sticky; top: 1rem; height: fit-content; }
-}
-
-/* Optional: make the chart span both columns on desktop (if you give it class="wide-2") */
-@media (min-width: 900px) {
-  .grid { grid-template-columns: 1fr 1fr; align-items: start; }
-  .wide-2 { grid-column: 1 / -1; }
-}
 
 /* Nicer scrollbar for the feed (supported browsers) */
 .feed { scrollbar-width: thin; scrollbar-color: #2a2f3a transparent; }
