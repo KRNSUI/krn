@@ -77,19 +77,22 @@
       </div>
     </aside>
 
-    <!-- Bottom: full-width chart -->
-<section class="card chart-col">
-  <h2 class="h-sm">Live Activity (KRN txs, ~24h)</h2>
-
-  <!-- Our self-hosted canvas chart -->
-  <div class="chart-wrap" style="height:320px">
-    <canvas id="krnChart" style="width:100%;height:100%;display:block;"></canvas>
+<!-- Coin details (left column by default) -->
+<section class="card">
+  <h2 class="h-sm">$KRN — Coin Details</h2>
+  <div id="coinDetails" class="s">
+    <div class="muted s">Loading coin details…</div>
   </div>
+</section>
 
-  <!-- Fallback link/iframe (optional) -->
+<!-- Price chart (full-width on desktop if you want; keep in chart-col if preferred) -->
+<section class="card chart-col">
+  <h2 class="h-sm">Price ($KRN)</h2>
+  <div class="chart-wrap" style="height:320px">
+    <canvas id="priceChart" style="width:100%;height:100%;display:block;"></canvas>
+  </div>
   <p class="muted s" style="margin-top:.5rem">
-    For detailed price/holders, open on Suiscan:
-    <a class="btn" href="https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs" target="_blank" rel="noopener">Suiscan →</a>
+    Price series via Blockberry metadata (proxied). If no history is shown, the provider may not expose OHLC/time-series.
   </p>
 </section>
 
