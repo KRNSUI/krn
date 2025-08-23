@@ -23,9 +23,13 @@
                  form-action 'self'">
 
   <script src="/public/feed.js" defer></script>
-  <title>KRN — Anonymous KUMplaint</title>
+  <title>$KRN on SUI | Anonymous KUMplaint</title>
+  <link rel="icon" type="image/png" href="https://pbs.twimg.com/profile_images/1959020302773755905/w-bp7w5i_400x400.jpg">
   <link rel="stylesheet" href="/public/styles.css">
 </head>
+<header class="center" style="margin-bottom:1.5rem;">
+  <img src="https://pbs.twimg.com/profile_images/1959020302773755905/w-bp7w5i_400x400.jpg" alt="KRN Banner" width="160" style="border-radius:50%; box-shadow:0 4px 12px rgba(0,0,0,.4);" />
+</header>
 <body>
   <!-- Buy $KRN CTA -->
 <center><p class="muted s">
@@ -40,7 +44,7 @@
   <main class="container krn-layout">
     <!-- Left: form -->
     <section class="form-col">
-      <h1>$KRN on $SUI</h1>
+      <h2>$KRN on $SUI</h2>
       <p class="muted">Submit an anonymous KUMplaint. No names; no emails; no tracking.</p>
 
       <form method="post" action="/submit" class="card">
@@ -89,13 +93,26 @@
         <a class="btn" href="https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs" target="_blank" rel="noopener">open it on Suiscan</a>.
       </p>
     </section>
+
+<div class="buy-social">
+  <div class="left">
     <p class="muted s">
-  Not financial advice. Tokens are risky; do your own research.
-  <a class="btn" href="https://blast.fun/token/0x76ff24af704e0b6d6a121ab23e5ea9e8343c29a0c50f664ab0f01b2f2858c758?ref=Aemon"
-     target="_blank" rel="noopener">
-    Buy KRN on Blast.fun →
-  </a>
-</p>
+      Not financial advice. Tokens are risky; do your own research.
+    </p>
+    <a class="btn" href="https://blast.fun/token/0x76ff24af704e0b6d6a121ab23e5ea9e8343c29a0c50f664ab0f01b2f2858c758?ref=Aemon"
+       target="_blank" rel="noopener">
+      Buy KRN on Blast.fun →
+    </a>
+  </div>
+
+  <div class="right">
+    <a class="social-x" href="https://x.com/KRNonsui" target="_blank" rel="noopener" aria-label="Follow $KRN on X">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1227" width="28" height="28" fill="currentColor">
+        <path d="M714 0h241L489 511l462 716H714L444 784 147 1227H-94l489-543L-94 0h241l329 465L714 0z"/>
+      </svg>
+    </a>
+  </div>
+</div>
 
   </main>
 </body>
