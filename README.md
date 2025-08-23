@@ -1,118 +1,85 @@
-* What the project is (anonymous complaint board on Sui, Cloudflare Pages + D1).
-* How to run locally.
-* How to deploy.
-* Database schema & migrations.
-* Security considerations (CSP, no PII).
+# 🪙 $KRN — Anonymous KUMplaint Platform
 
-Here’s a clean draft tailored to what you’ve given me:
+[![Buy on Blast.fun](https://img.shields.io/badge/Buy-KRN%20on%20Blast.fun-6ee7ff?style=for-the-badge&logo=coinbase)](https://blast.fun/token/0x76ff24af704e0b6d6a121ab23e5ea9e8343c29a0c50f664ab0f01b2f2858c758?ref=Aemon)
+[![Sui Explorer](https://img.shields.io/badge/View%20on-Suiscan-blue?style=for-the-badge&logo=sui)](https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs)
+![Cloudflare Pages](https://img.shields.io/badge/Hosted%20on-Cloudflare%20Pages-F38020?style=for-the-badge&logo=cloudflare)
+![MIT License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
----
-
-# KRN – Anonymous Complaints on Sui
-
-An anonymous complaint board powered by **Cloudflare Pages Functions** + **Cloudflare D1**.
-No names, no emails, no tracking.
-
-👉 Live: [krn.fuck-out.com](https://krn.fuck-out.com)
+1. **Anonymous KUMplaints** — A simple web app where anyone can drop a complaint without names, emails, or tracking.  
+2. **KRN Token** — A token on Sui with utility and governance potential in this ecosystem.
 
 ---
 
-## Features
+## 🌐 Website
+👉 [Anonymous KUMplaint Platform](https://krn.fuck-out.com)
 
-* Static frontend with complaint submission form.
-* Pages Functions (`/functions`) handle API requests:
-
-  * `submit.js` → insert complaint into D1.
-  * `complaints.js` → list recent complaints.
-  * `diag.js` + `status.js` → runtime health checks.
-* Cloudflare D1 database with `complaints` table and indexed timestamps.
-* Strict CSP for security.
+- Submit complaints anonymously.
+- Recent KUMplaints are displayed publicly.
+- Integrated live chart of the $KRN token on Sui.
 
 ---
 
-## Project Structure
+## 💸 Buy $KRN
+You can purchase $KRN on **Blast.fun**:  
+[Buy KRN on Blast.fun →](https://blast.fun/token/0x76ff24af704e0b6d6a121ab23e5ea9e8343c29a0c50f664ab0f01b2f2858c758?ref=Aemon)
 
-```
-krn/
-├── public/           # static assets (feed.js, styles.css, etc.)
-├── functions/        # Pages Functions (API routes)
-│   ├── submit.js
-│   ├── complaints.js
-│   ├── diag.js
-│   └── status.js
-├── migrations/       # D1 schema migrations
-│   └── 001_init.sql
-├── index.ts          # entry point / renderHtml
-├── renderHtml.ts     # HTML response helper
-└── wrangler.toml     # Cloudflare config (bindings etc.)
+Token Address (Sui mainnet):  
 ```
 
----
+0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN
 
-## Database
-
-Table schema (`migrations/001_init.sql`):
-
-```sql
-CREATE TABLE IF NOT EXISTS complaints (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    message TEXT NOT NULL,
-    created_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_complaints_created_at
-  ON complaints(created_at);
-```
+````
 
 ---
 
-## Local Development
+## 📊 Token Info
+- **Name:** KRN  
+- **Chain:** Sui mainnet  
+- **Explorer:** [View on Suiscan](https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs)
 
-Requires [Wrangler](https://developers.cloudflare.com/workers/wrangler/).
+---
 
+## ⚖️ Disclaimer
+All submissions are **user-generated** and reflect the opinions of individual users only.  
+The KRN project and its maintainers:
+
+- Do **not** endorse or verify any submitted content.  
+- Are **not liable** for user-submitted material.  
+- Reserve the right to remove unlawful or harmful submissions.  
+
+**By using this platform, you agree not to post personally identifiable information (PII), unlawful, or defamatory content.**
+
+---
+
+## 🛠️ Development
+This project is built with:
+- **Cloudflare Pages** (static hosting)  
+- **Cloudflare Workers & D1** (serverless + database for complaints)  
+- **Vanilla HTML, CSS, JS** (no Node build required)
+
+### Local Preview
+Run a simple local server to test layout:
 ```bash
-# Install dependencies if any
-npm install
+python3 -m http.server 8000
+````
 
-# Run locally with Pages + Functions
-npx wrangler pages dev ./public --local
+Then visit [http://localhost:8000](http://localhost:8000).
+
+---
+
+## 📜 License
+
+MIT License © 2025 KRN Contributors
+
 ```
 
 ---
 
-## Deployment
-
-1. Push to `main`.
-2. Cloudflare Pages (`krn`) auto-builds + deploys.
-3. Ensure D1 binding is configured:
-
-   * Go to **Pages → Settings → Functions → Bindings**
-   * Add binding:
-
-     * Type: D1 Database
-     * Variable: `KRN_DB`
-     * Database: `krn`
-
----
-
-## Endpoints
-
-* `/submit` → POST JSON `{ "message": "..." }`
-* `/complaints` → GET latest complaints
-* `/diag` → reports whether `KRN_DB` binding is available
-* `/status` → database health check
-
----
-
-## Security
-
-* Strong CSP enforced (`script-src 'self'`).
-* No personal identifiers allowed.
-* All data stored anonymously in D1.
-
----
-
-## License
-
-MIT License.
+✅ This version explains:  
+- What KRN is.  
+- Where to use it.  
+- Where to buy it.  
+- Token details.  
+- Liability disclaimer.  
+- Dev + license info.  
 
