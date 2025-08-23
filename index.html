@@ -23,6 +23,8 @@
                  form-action 'self'">
 
   <script src="/public/feed.js" defer></script>
+  <script src="/public/chart.js" defer></script>
+
   <title>$KRN on SUI | Anonymous KUMplaint</title>
   <link rel="icon" type="image/png" href="https://pbs.twimg.com/profile_images/1959020302773755905/w-bp7w5i_400x400.jpg">
   <link rel="stylesheet" href="/public/styles.css">
@@ -33,12 +35,12 @@
 <body>
   <!-- Buy $KRN CTA -->
 <center><p class="muted s">
-  Not financial advice. Tokens are risky; do your own research.
+  Not financial advice. Tokens are risky; do your own research.</p>
+  <p>
   <a class="btn" href="https://blast.fun/token/0x76ff24af704e0b6d6a121ab23e5ea9e8343c29a0c50f664ab0f01b2f2858c758?ref=Aemon"
      target="_blank" rel="noopener">
     Buy $KRN on Blast.fun →
   </a>
-  Not financial advice. Tokens are risky; do your own research.
 </p></center>
 
   <main class="container krn-layout">
@@ -75,24 +77,24 @@
       </div>
     </aside>
 
-    <!-- Bottom: full-width chart -->
-    <section class="card chart-col">
-      <h2 class="h-sm">Live Chart ($KRN on Sui)</h2>
-      <div class="chart-wrap">
-        <iframe
-          title="KRN on Suiscan"
-          src="https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs"
-          loading="lazy"
-          referrerpolicy="no-referrer"
-          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-          allowfullscreen
-        ></iframe>
-      </div>
-      <p class="muted s">
-        If the chart doesn’t render,
-        <a class="btn" href="https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs" target="_blank" rel="noopener">open it on Suiscan</a>.
-      </p>
-    </section>
+<!-- Coin details (left column by default) -->
+<section class="card">
+  <h2 class="h-sm">$KRN — Coin Details</h2>
+  <div id="coinDetails" class="s">
+    <div class="muted s">Loading coin details…</div>
+  </div>
+</section>
+
+<!-- Price chart (full-width on desktop if you want; keep in chart-col if preferred) -->
+<section class="card chart-col">
+  <h2 class="h-sm">Price ($KRN)</h2>
+  <div class="chart-wrap" style="height:320px">
+    <canvas id="priceChart" style="width:100%;height:100%;display:block;"></canvas>
+  </div>
+  <p class="muted s" style="margin-top:.5rem">
+    Price series via Blockberry metadata (proxied). If no history is shown, the provider may not expose OHLC/time-series.
+  </p>
+</section>
 
 <div class="buy-social">
   <div class="left">
