@@ -13,7 +13,7 @@
 //   - mode=totalWithMarketCap  -> /sui/v1/coins/total-with-market-cap
 //   - mode=priceHistory        -> tries to derive {labels, series} price array from metadata-like payloads
 //
-// Defaults: mode=coin for KRN type.
+// Defaults: mode=coin for your KRN type.
 
 export async function onRequest({ request, env }) {
   if (!env.BB_API_KEY) {
