@@ -72,30 +72,34 @@ import { censorText } from "./censor.js";
     const id = String(it.id ?? it.ID ?? it.rowid ?? "");
     const when = (pickTime(it) || new Date()).toLocaleString();
 
-    const raw = pickText(it);
-    const rawB64 = toB64(raw);
+const raw = pickText(it);
 
-    const { text: censored } = censorText(raw);
-    const preview = twoLinePreview(censored);
+// Censor for preview (you keep your censor.js in place server-side too)
+const { text: censored } = censorText(raw);
 
-    const needsReveal = censored !== raw || raw.split(/\r?\n/).length > 2;
+// Make the preview single-line so CSS can clamp visually to 2 lines.
+// We collapse newlines and runs of spaces into a single space.
+const previewShort = censored.replace(/\s*\r?\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
 
-    return `
-      <div class="item" data-id="${$esc(id)}" data-raw-b64="${$esc(rawB64)}">
-        <div class="time">${$esc(when)}</div>
-        <pre class="msg">
-          <span data-variant="short" class="inline">${$esc(preview)}</span>
-          <span data-variant="full" class="inline hidden"></span>
-        </pre>
-        ${
-          needsReveal
-            ? `<a href="#" class="reveal-link" data-id="${$esc(
-                id
-              )}" data-state="closed">Reveal original</a>`
-            : ""
-        }
-      </div>
-    `;
+// Decide if we need a reveal link: show it if content was censored,
+// or if the original likely exceeds two lines (has newlines or is fairly long).
+const needsReveal = (censored !== raw) || /\r?\n/.test(raw) || raw.length > 200;
+
+return `
+  <div class="item" data-id="${$esc(id)}">
+    <div class="time">${$esc(when)}</div>
+    <pre class="msg">
+      <span data-variant="short" class="inline">${$esc(previewShort)}</span>
+      <span data-variant="full" class="inline hidden"></span>
+    </pre>
+    ${
+      needsReveal
+        ? `<a href="#" class="reveal-link" data-id="${$esc(id)}" data-state="closed">Reveal original</a>`
+        : ""
+    }
+  </div>
+`;
+
   }
 
   /* ---------------- Reveal / hide original ---------------- */
