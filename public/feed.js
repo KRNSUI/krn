@@ -3,7 +3,7 @@
   const feedEl = document.getElementById("feed");
   if (!feedEl) return;
 
-  // ---------- CENSORING (local copy; OK to keep if you also have censor.js) ----------
+  // ---------- CENSORING (local copy) ----------
   const BANNED_PATTERNS = [
     /\b(ni+g+g+e*r+|chink|sp[i1]c|k[i1]ke|raghead|g[o0]o+k)\b/gi,
     /\b(fag|f[a@]gg?o+t|dyke)\b/gi,
@@ -31,8 +31,6 @@
   }
 
   // ---------- UTIL ----------
-  const PREVIEW_LIMIT = 1000; // preview length before requiring reveal
-
   const $esc = (s) =>
     String(s)
       .replaceAll("&", "&amp;")
@@ -41,8 +39,6 @@
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
 
-  const truncate = (s, n) => (s.length <= n ? s : s.slice(0, n) + "…");
-
   function pickTime(it) {
     const v = it.created_at ?? it.createdAt ?? it.created ?? it.time ?? it.timestamp;
     const d = v ? new Date(v) : new Date(NaN);
@@ -50,7 +46,6 @@
   }
 
   function pickText(it) {
-    // server feed can emit `text` or `message`
     return it.text ?? it.message ?? "";
   }
 
@@ -66,25 +61,18 @@
   // Try common shapes coming back from /complaints?id=&reveal=1
   function extractFullText(obj) {
     if (!obj) return "";
-    // Most likely shapes first:
     if (obj.complaint?.text) return String(obj.complaint.text);
     if (obj.complaint?.message) return String(obj.complaint.message);
+    if (typeof obj.complaint === "string") return obj.complaint;
 
-    // Flat shapes:
     if (obj.text) return String(obj.text);
     if (obj.message) return String(obj.message);
 
-    // Nested generic shapes:
     if (obj.data?.text) return String(obj.data.text);
     if (obj.data?.message) return String(obj.data.message);
+
     if (obj.item?.text) return String(obj.item.text);
     if (obj.item?.message) return String(obj.item.message);
-
-    // Anything else stringy:
-    try {
-      // Sometimes servers return { complaint: "..." }
-      if (typeof obj.complaint === "string") return obj.complaint;
-    } catch {}
 
     return "";
   }
@@ -117,25 +105,24 @@
 
     const raw = pickText(it);
     const { text: censored } = censorText(raw);
-    
-// Show first 2 lines max
-const lines = censored.split(/\r?\n/);
-const preview = lines.slice(0, 2).join("\n");
-const needsExpand = (censored !== raw) || (lines.length > 2);
 
+    // 2-line preview logic
+    const lines = censored.split(/\r?\n/);
+    const preview = lines.slice(0, 2).join("\n");
+
+    // Show link if the text was censored OR original has > 2 lines
+    const needsExpand = (censored !== raw) || (lines.length > 2);
 
     return `
       <div class="item" data-id="${$esc(id)}">
         <div class="time">${$esc(when)}</div>
         <pre class="msg">
-          <span data-variant="short" class="block">${$esc(preview)}</span>
-          <span data-variant="full" class="block hidden"></span>
+          <span data-variant="short" style="display:inline;">${$esc(preview)}</span>
+          <span data-variant="full" style="display:none;"></span>
         </pre>
         ${
-          needsReveal
-            ? `<a href="#" class="reveal-link" data-id="${$esc(
-                id
-              )}" data-state="closed">Reveal original</a>`
+          needsExpand
+            ? `<a href="#" class="reveal-link" data-id="${$esc(id)}" data-state="closed">Reveal original</a>`
             : ""
         }
       </div>
@@ -156,7 +143,6 @@ const needsExpand = (censored !== raw) || (lines.length > 2);
     const shortSpan = itemEl.querySelector('span[data-variant="short"]');
     const fullSpan = itemEl.querySelector('span[data-variant="full"]');
 
-    // OPEN → fetch original text (uncensored) once
     if (state === "closed") {
       try {
         link.textContent = "Loading…";
@@ -166,14 +152,13 @@ const needsExpand = (censored !== raw) || (lines.length > 2);
           cache: "no-store",
         });
         const payload = await r.json();
-
         const fullRaw = extractFullText(payload);
 
-        // Ensure we show something even if empty
+        // Show the full ORIGINAL text (uncensored)
         fullSpan.textContent = fullRaw || "(no content)";
-        fullSpan.classList.remove("hidden");
-        shortSpan.classList.add("hidden");
 
+        shortSpan.style.display = "none";
+        fullSpan.style.display = "inline";
         link.textContent = "Hide original";
         link.setAttribute("data-state", "open");
       } catch (err) {
@@ -186,10 +171,10 @@ const needsExpand = (censored !== raw) || (lines.length > 2);
       return;
     }
 
-    // CLOSE
+    // collapse
     if (state === "open") {
-      fullSpan.classList.add("hidden");
-      shortSpan.classList.remove("hidden");
+      fullSpan.style.display = "none";
+      shortSpan.style.display = "inline";
       link.textContent = "Reveal original";
       link.setAttribute("data-state", "closed");
     }
