@@ -3,18 +3,23 @@
 
 // ⚠️ Keep this list short-ish and specific. Add/remove as you see fit.
 const BANNED_PATTERNS = [
-  // slurs / racism / harassment (examples; extend to your needs)
-  /\b(ni+g+g+e*r+|chink|sp[i1]c|k[i1]ke|raghead|g[o0]o+k)\b/gi,
+  // slurs / racism / harassment (examples; extend as needed)
+  /\b(ni+g+g*e*r+|ch[i1]nk|sp[i1]c|k[i1]ke|raghead|g[o0]o+k)\b/gi,
   /\b(fag|f[a@]gg?o+t|dyke)\b/gi,
 
-  // generic profanity (lighter set; you can expand)
-  /\b(fuck(?:ing|er)?|sh[i1]t|bullsh[i1]t|asshole|cunt|bitch|motherfucker)\b/gi,
+  // profanity with common variations
+  /\b(fuck(?:ing|er|tard)?|f\W*u\W*c\W*k+)\b/gi,      // fuck + variants
+  /\b(sh[i1]t(?:s|ty|tiest|head)?)\b/gi,              // shit, shits, shitty…
+  /\b(bullsh[i1]t)\b/gi,                              // bullshit
+  /\b(asshole|a\W*s+\W*h[o0]l[e3])\b/gi,              // asshole with variations
+  /\b(cunt|c\W*u\W*n\W*t)\b/gi,                       // cunt
+  /\b(bitch|bi+ch|b[i1]tch)\b/gi,                     // bitch
+  /\b(motherfucker|m[o0]fo|m[o0]therf[u*]cker)\b/gi,  // motherfucker
 
-  // sexual explicit / solicitation
+  // sexual explicit
+  /\b(wh[o0]r[e3]|w\W*h[o0]r\W*e)\b/gi,               // whore, wh0re, w h o r e
+  /\b(slut|sl[u*]tty|sl\W*u\W*t)\b/gi,                // slut
   /\b(anal|blowjob|handjob|cumshot|deepthroat|xxx|porn|hentai)\b/gi,
-
-  // doxing-like terms (emails/phones are often sensitive; choose policy)
-  // /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,   // uncomment to mask emails
 ];
 
 // Any EVM/Sui-like address “0x...” gets redacted to avoid doxing/piling-on.
