@@ -8,58 +8,82 @@ export async function onRequest({ request, env }) {
   }
 
   const urlIn = new URL(request.url);
-  const hours = clampInt(urlIn.searchParams.get("hours"), 24, 1, 72);
-  const pageSize = clampInt(urlIn.searchParams.get("size"), 10, 1, 50);
+  const hours = clampInt(urlIn.searchParams.get("hours"), 24, 1, 72); // default 24h, 1..72
+  const pageSize = clampInt(urlIn.searchParams.get("size"), 10, 1, 50); // holders page size
 
-  const headers = { accept: "application/json", "x-api-key": env.BB_API_KEY };
+  const headers = {
+    accept: "application/json",
+    "content-type": "application/json",
+    "x-api-key": env.BB_API_KEY,
+  };
 
-  const fetchJSON = async (path) => {
+  // small helpers
+  const getJSON = async (path) => {
     const url = `https://api.blockberry.one/sui/v1${path}`;
-    const r = await fetch(url, { headers });
-    const t = await r.text();
-    if (!r.ok) throw new Error(`${path} → ${r.status}: ${truncate(t, 240)}`);
-    return JSON.parse(t);
+    const r = await fetch(url, { headers, method: "GET" });
+    const text = await r.text();
+    if (!r.ok) throw new Error(`${path} → ${r.status}: ${truncate(text, 240)}`);
+    return JSON.parse(text || "{}");
+  };
+
+  const postJSON = async (path, bodyObj) => {
+    const url = `https://api.blockberry.one/sui/v1${path}`;
+    const r = await fetch(url, {
+      headers,
+      method: "POST",
+      body: JSON.stringify(bodyObj || {}),
+    });
+    const text = await r.text();
+    if (!r.ok) throw new Error(`${path} → ${r.status}: ${truncate(text, 240)}`);
+    return JSON.parse(text || "{}");
   };
 
   try {
-    // 1) Core coin info (often includes decimals + totals)
-    const core = await fetchJSON(`/coins/${encodeURIComponent(coinType)}`).catch(() => ({}));
+    // 1) Core coin info (includes total supply + decimals/symbol)
+    const supply = await getJSON(`/coins/${encodeURIComponent(coinType)}`);
 
-    // 2) Metadata (name, symbol, decimals, logo…)
-    const meta = await fetchJSON(`/coins/metadata/${encodeURIComponent(coinType)}`).catch(() => ({}));
+    // 2) Coin metadata (name/logo/etc.)
+    const metadata = await getJSON(
+      `/coins/metadata/${encodeURIComponent(coinType)}`
+    ).catch(() => null); // metadata may not always exist
 
-    const symbol = pickFirst(meta?.symbol, core?.symbol, "KRN");
-    const decimals = toInt(pickFirst(meta?.decimals, core?.decimals, 9));
-
-    // ---- total supply normalization ----
-    // Try several common keys Blockberry may expose
-    const totalRawCandidate = pickFirst(
-      core?.total,
-      core?.totalSupply,
-      core?.total_supply,
-      core?.supply,
-      core?.amount,
-      core?.data?.total
-    );
-
-    const totalSupplyRaw = totalRawCandidate != null ? String(totalRawCandidate) : null;
-    const totalSupply = totalSupplyRaw != null
-      ? toHumanBigInt(totalSupplyRaw, decimals, 4) // "123.4567"
-      : null;
-
-    // 3) Top holders (optional UI)
-    const holders = await fetchJSON(
-      `/coins/${encodeURIComponent(coinType)}/holders?page=0&size=${pageSize}&orderBy=DESC&sortBy=AMOUNT`
+    // 3) Top holders
+    const holders = await getJSON(
+      `/coins/${encodeURIComponent(
+        coinType
+      )}/holders?page=0&size=${pageSize}&orderBy=DESC&sortBy=AMOUNT`
     ).catch(() => ({ data: [] }));
 
-    // 4) Tx/activity series (may 400 for some coins; that's OK)
-    let labels = [], series = [], txWarning;
+    // 4) Transactions (POST) → bucket to counts per hour (used for chart)
+    let labels = [];
+    let series = [];
+    let txWarning = null;
+
     try {
-      const limit = Math.max(50, Math.min(500, hours * 20));
-      const tx = await fetchJSON(`/coins/${encodeURIComponent(coinType)}/transactions?page=0&size=${limit}`);
-      const items = Array.isArray(tx?.data) ? tx.data : Array.isArray(tx) ? tx : [];
+      const limit = Math.max(50, Math.min(500, hours * 20)); // heuristic ~20 tx/hour
+      // Primary: POST /coins/{coinType}/transactions
+      let tx = await postJSON(
+        `/coins/${encodeURIComponent(coinType)}/transactions`,
+        { page: 0, size: limit }
+      ).catch(async (e) => {
+        // Fallback path (if provider changes route shape)
+        // POST /transactions/by-coin-type?coinType=...
+        try {
+          const fb = await postJSON(
+            `/transactions/by-coin-type?coinType=${encodeURIComponent(coinType)}&page=0&size=${limit}`,
+            {}
+          );
+          return fb;
+        } catch {
+          throw e;
+        }
+      });
+
+      // normalize item array out of common shapes
+      const items = normalizeList(tx);
       const cutoff = Date.now() - hours * 3600 * 1000;
       const buckets = new Map();
+
       for (const it of items) {
         const ts = pickTimestampMs(it);
         if (!ts || ts < cutoff) continue;
@@ -73,51 +97,56 @@ export async function onRequest({ request, env }) {
       }
     } catch (e) {
       txWarning = String(e.message || e);
-    }
-
-    // Debug aid
-    if (urlIn.searchParams.get("debug") === "1") {
-      return json({
-        ok: true,
-        coinRaw: core,
-        metaRaw: meta,
-        normalized: { symbol, decimals, totalSupplyRaw, totalSupply },
-        topHolders: holders?.data ?? [],
-        priceSeries: { labels, series },
-        warnings: txWarning ? { txWarning } : undefined
-      });
+      labels = [];
+      series = [];
     }
 
     return json({
       ok: true,
-      coin: { symbol, decimals, totalSupplyRaw, totalSupply, metadata: meta },
-      topHolders: holders?.data ?? [],
-      priceSeries: { labels, series },
-      warnings: txWarning ? { txWarning } : undefined
+      coin: {
+        // normalize a few friendly fields for UI
+        symbol: metadata?.symbol ?? supply?.symbol ?? "KRN",
+        name: metadata?.name ?? "KRN",
+        decimals: supply?.decimals ?? 9,
+        totalSupply: supply?.total, // may be number or string per provider
+        metadata,
+      },
+      topHolders: normalizeList(holders),
+      priceSeries: { labels, series }, // actually tx/hour series (rename in UI as needed)
+      warnings: txWarning ? { txWarning } : undefined,
     });
   } catch (err) {
     return json({ ok: false, error: String(err) }, 500);
   }
 }
 
-/* ---------- helpers ---------- */
-function pickFirst(...vals) {
-  for (const v of vals) if (v !== undefined && v !== null) return v;
-  return undefined;
-}
-function toInt(v, def = 0) {
-  const n = parseInt(v, 10);
-  return Number.isFinite(n) ? n : def;
-}
+/* ---------------- helpers ---------------- */
+
 function clampInt(v, def, min, max) {
   const n = parseInt(v ?? def, 10);
   if (Number.isNaN(n)) return def;
   return Math.max(min, Math.min(max, n));
 }
+
+function normalizeList(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.list)) return payload.list;
+  if (Array.isArray(payload?.content)) return payload.content;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
+}
+
 function pickTimestampMs(it) {
   const cands = [
-    it.timestamp, it.time, it.createdAt, it.created_at,
-    it.timestampMs, it.checkpointTimestampMs, it.executedTimeMs
+    it.timestamp,
+    it.time,
+    it.createdAt,
+    it.created_at,
+    it.timestampMs,
+    it.checkpointTimestampMs,
+    it.executedTimeMs,
   ];
   for (const v of cands) {
     if (v == null) continue;
@@ -132,23 +161,14 @@ function pickTimestampMs(it) {
   }
   return null;
 }
-// Convert big-int string with `decimals` to a human string w/ up to `maxFrac` decimals
-function toHumanBigInt(raw, decimals, maxFrac = 2) {
-  const neg = String(raw).startsWith("-");
-  let s = neg ? String(raw).slice(1) : String(raw);
-  // strip non-digits just in case
-  s = s.replace(/\D/g, "") || "0";
-  const pad = s.padStart(decimals + 1, "0");
-  let int = pad.slice(0, pad.length - decimals);
-  let frac = pad.slice(pad.length - decimals);
-  // trim/limit fraction
-  frac = frac.replace(/0+$/g, "").slice(0, maxFrac);
-  int = int.replace(/^0+(?=\d)/, "");
-  return (neg ? "-" : "") + (int || "0") + (frac ? "." + frac : "");
+
+function truncate(s, n) {
+  return s.length > n ? s.slice(0, n) + "…" : s;
 }
-function truncate(s, n) { return String(s).length > n ? String(s).slice(0, n) + "…" : String(s); }
+
 function json(body, status = 200) {
   return new Response(JSON.stringify(body, null, 2), {
-    status, headers: { "content-type": "application/json; charset=utf-8" }
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
   });
 }
