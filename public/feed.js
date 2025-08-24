@@ -1,56 +1,71 @@
-// public/feed.js
-import { censorText } from "./censor.js";
+// /public/feed.js  (ES module)
+import { censorText } from '/public/censor.js';
 
 (() => {
-  const feedEl = document.getElementById("feed");
+  const feedEl = document.getElementById('feed');
   if (!feedEl) return;
 
-  /* ---------------- Utils ---------------- */
+  // ---------- CONFIG ----------
+  const PREVIEW_LINES = 2; // show first 2 logical lines, then reveal
+
+  // ---------- HELPERS ----------
   const $esc = (s) =>
-    String(s)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+    String(s ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
 
-  const toB64 = (s) => btoa(unescape(encodeURIComponent(String(s))));
-  const fromB64 = (b) => decodeURIComponent(escape(atob(String(b))));
-
-  const twoLinePreview = (text) => text.split(/\r?\n/).slice(0, 2).join("\n");
-
-  const pickTime = (it) => {
+  function pickTime(it) {
     const v =
-      it.created_at ?? it.createdAt ?? it.created ?? it.time ?? it.timestamp;
+      it.created_at ??
+      it.createdAt ??
+      it.created ??
+      it.time ??
+      it.timestamp;
     const d = v ? new Date(v) : new Date(NaN);
     return Number.isFinite(d.getTime()) ? d : null;
-  };
+  }
 
-  const pickText = (it) => it.text ?? it.message ?? "";
+  function pickText(it) {
+    return it.text ?? it.message ?? '';
+  }
 
-  const normalizeList = (payload) => {
+  function normalizeList(payload) {
     if (Array.isArray(payload)) return payload;
     if (Array.isArray(payload?.items)) return payload.items;
     if (Array.isArray(payload?.results)) return payload.results;
     if (Array.isArray(payload?.rows)) return payload.rows;
     if (Array.isArray(payload?.data)) return payload.data;
     return [];
-  };
+  }
 
-  const extractFullText = (obj) => {
-    if (!obj) return "";
+  // Be generous in what we accept from /complaints?id=…&reveal=1
+  function extractFullText(obj) {
+    if (!obj || typeof obj !== 'object') return '';
+    if (typeof obj.complaint === 'string') return obj.complaint;
     if (obj.complaint?.text) return String(obj.complaint.text);
     if (obj.complaint?.message) return String(obj.complaint.message);
-    if (typeof obj.complaint === "string") return obj.complaint;
     if (obj.text) return String(obj.text);
     if (obj.message) return String(obj.message);
-    return "";
-  };
+    if (obj.data?.text) return String(obj.data.text);
+    if (obj.data?.message) return String(obj.data.message);
+    if (obj.item?.text) return String(obj.item.text);
+    if (obj.item?.message) return String(obj.item.message);
+    return '';
+  }
 
-  /* ---------------- Load feed ---------------- */
+  function firstNLines(str, n) {
+    // Logical split on newlines; join max N lines
+    const lines = String(str ?? '').split(/\r?\n/);
+    return { preview: lines.slice(0, n).join('\n'), totalLines: lines.length };
+  }
+
+  // ---------- LOAD ----------
   async function load() {
     try {
-      const res = await fetch("/complaints?limit=120", { cache: "no-store" });
+      const res = await fetch('/complaints?limit=120', { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const list = normalizeList(json);
@@ -60,101 +75,96 @@ import { censorText } from "./censor.js";
         return;
       }
 
-      feedEl.innerHTML = list.map(renderItem).join("");
+      feedEl.innerHTML = list.map(renderItem).join('');
     } catch (e) {
-      console.error("feed load error:", e);
+      console.error('feed load error:', e);
       feedEl.innerHTML = `<div class="muted s">Could not load complaints.</div>`;
     }
   }
 
-  /* ---------------- Render each item ---------------- */
+  // ---------- RENDER ----------
   function renderItem(it) {
-    const id = String(it.id ?? it.ID ?? it.rowid ?? "");
+    const id = String(it.id ?? it.ID ?? it.rowid ?? '');
     const when = (pickTime(it) || new Date()).toLocaleString();
 
-const raw = pickText(it);
+    const raw = pickText(it);
+    const { text: censored } = censorText(raw);
 
-// Censor for preview (you keep your censor.js in place server-side too)
-const { text: censored } = censorText(raw);
+    const { preview, totalLines } = firstNLines(censored, PREVIEW_LINES);
+    const needsReveal =
+      censored !== raw || totalLines > PREVIEW_LINES;
 
-// Make the preview single-line so CSS can clamp visually to 2 lines.
-// We collapse newlines and runs of spaces into a single space.
-const previewShort = censored.replace(/\s*\r?\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    // Items without reveal are extra-compact via .compact class
+    const itemClass = `item${needsReveal ? '' : ' compact'}`;
 
-// Decide if we need a reveal link: show it if content was censored,
-// or if the original likely exceeds two lines (has newlines or is fairly long).
-const needsReveal = (censored !== raw) || /\r?\n/.test(raw) || raw.length > 200;
-
-return `
-  <div class="item" data-id="${$esc(id)}">
-    <div class="time">${$esc(when)}</div>
-    <pre class="msg">
-      <span data-variant="short" class="inline">${$esc(previewShort)}</span>
-      <span data-variant="full" class="inline hidden"></span>
-    </pre>
-    ${
-      needsReveal
-        ? `<a href="#" class="reveal-link" data-id="${$esc(id)}" data-state="closed">Reveal original</a>`
-        : ""
-    }
-  </div>
-`;
-
+    return `
+      <div class="${itemClass}" data-id="${$esc(id)}">
+        <div class="time">${$esc(when)}</div>
+        <pre class="msg">
+          <span data-variant="short" class="inline">${$esc(preview)}</span>
+          <span data-variant="full" class="inline hidden"></span>
+        </pre>
+        ${
+          needsReveal
+            ? `<a href="#" class="reveal-link" data-id="${$esc(
+                id
+              )}" data-state="closed">Reveal original</a>`
+            : ''
+        }
+      </div>
+    `;
   }
 
-  /* ---------------- Reveal / hide original ---------------- */
-  feedEl.addEventListener("click", async (ev) => {
-    const link = ev.target.closest(".reveal-link");
+  // ---------- REVEAL/HIDE (event delegation) ----------
+  feedEl.addEventListener('click', async (ev) => {
+    const link = ev.target.closest('.reveal-link');
     if (!link) return;
     ev.preventDefault();
 
-    const id = link.getAttribute("data-id") || "";
-    const state = link.getAttribute("data-state") || "closed";
-    const itemEl = link.closest(".item");
+    const id = link.getAttribute('data-id') || '';
+    const state = link.getAttribute('data-state') || 'closed';
+    const itemEl = link.closest('.item');
     if (!itemEl) return;
 
     const shortSpan = itemEl.querySelector('span[data-variant="short"]');
     const fullSpan = itemEl.querySelector('span[data-variant="full"]');
 
-    if (state === "closed") {
+    if (state === 'closed') {
       try {
-        link.textContent = "Loading…";
-        link.classList.add("is-loading");
+        link.textContent = 'Loading…';
+        link.classList.add('is-loading');
 
-        let fullRaw = "";
-        try {
-          const r = await fetch(
-            `/complaints?id=${encodeURIComponent(id)}&reveal=1`,
-            { cache: "no-store" }
-          );
-          const payload = await r.json().catch(() => ({}));
-          fullRaw = extractFullText(payload);
-        } catch {}
+        const r = await fetch(
+          `/complaints?id=${encodeURIComponent(id)}&reveal=1`,
+          { cache: 'no-store' }
+        );
+        const payload = await r.json();
+        let fullRaw = extractFullText(payload);
 
-        if (!fullRaw) {
-          const b64 = itemEl.getAttribute("data-raw-b64") || "";
-          if (b64) {
-            try {
-              fullRaw = fromB64(b64);
-            } catch {}
-          }
-        }
+        // If your endpoint returns empty string for some reason,
+        // show a clear placeholder instead of "(no content)" everywhere.
+        if (!fullRaw) fullRaw = '(no content)';
 
-        fullSpan.textContent = fullRaw || "(no content)";
-        fullSpan.classList.remove("hidden");
-        shortSpan.classList.add("hidden");
-
-        link.textContent = "Hide original";
-        link.setAttribute("data-state", "open");
+        fullSpan.textContent = fullRaw; // UNCENSORED original per your requirement
+        fullSpan.classList.remove('hidden');
+        shortSpan.classList.add('hidden');
+        link.textContent = 'Hide original';
+        link.setAttribute('data-state', 'open');
+      } catch (err) {
+        console.error('reveal error:', err);
+        link.textContent = 'Reveal original';
+        alert('Failed to reveal.');
       } finally {
-        link.classList.remove("is-loading");
+        link.classList.remove('is-loading');
       }
-    } else {
-      fullSpan.classList.add("hidden");
-      shortSpan.classList.remove("hidden");
-      link.textContent = "Reveal original";
-      link.setAttribute("data-state", "closed");
+      return;
     }
+
+    // collapse
+    fullSpan.classList.add('hidden');
+    shortSpan.classList.remove('hidden');
+    link.textContent = 'Reveal original';
+    link.setAttribute('data-state', 'closed');
   });
 
   load();

@@ -255,37 +255,23 @@ textarea{ min-height:10rem }
 .holders .addr { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 70%; }
 .holders .amt { font-weight:600; }
 
-/* Feed item base */
-.item { padding: .55rem .25rem; border-bottom: 1px solid #3a2415; }
-.item:last-child { border-bottom: 0; }
-.item .time { margin-bottom: .2rem; font-size: .8rem; color: var(--muted); }
-.item .msg { margin: 0; }
+/* Compact items when no reveal link is present */
+.item.compact { padding: .35rem .25rem; }
+.item.compact .time { margin-bottom: .15rem; }
+.item.compact .msg { margin: 0; }
 
-/* Two-line clamp for the SHORT preview */
-.item .msg [data-variant="short"]{
-  display: -webkit-box;
-  -webkit-line-clamp: 2;           /* ← exactly two visible lines */
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  white-space: normal;             /* allow wrapping so clamping works */
-  word-break: break-word;
-}
-
-/* Full text stays multiline */
-.item .msg [data-variant="full"]{
-  display: none;                   /* toggled by JS */
-  white-space: pre-wrap;           /* preserve original newlines */
-}
-
-/* Toggle helpers */
+/* Inline toggling inside <pre> */
 .inline { display: inline; }
 .hidden { display: none !important; }
 
-/* Compact items when there’s no reveal link */
-.item:not(:has(.reveal-link)) { padding-bottom: .35rem; }
+/* Tidy default spacing */
+.item { padding: .55rem .25rem; border-bottom: 1px solid #3a2415; }
+.item:last-child { border-bottom: 0; }
+.item .time { margin-bottom: .2rem; }
+.item .msg { margin: 0; white-space: pre-wrap; word-break: break-word; }
 
-/* Reveal link */
-.reveal-link{
+/* Reveal link style */
+.reveal-link {
   display: inline-block;
   margin-top: .3rem;
   font-size: .9rem;
