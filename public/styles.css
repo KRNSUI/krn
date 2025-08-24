@@ -255,22 +255,15 @@ textarea{ min-height:10rem }
 .holders .addr { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 70%; }
 .holders .amt { font-weight:600; }
 
-/* Compact items when no reveal link is present */
-.item.compact { padding: .35rem .25rem; }
-.item.compact .time { margin-bottom: .15rem; }
-.item.compact .msg { margin: 0; }
-
-/* Inline toggling inside <pre> */
 .inline { display: inline; }
 .hidden { display: none !important; }
 
-/* Tidy default spacing */
 .item { padding: .55rem .25rem; border-bottom: 1px solid #3a2415; }
 .item:last-child { border-bottom: 0; }
+.item.no-reveal { padding-bottom: .25rem; } /* extra tight when no link */
 .item .time { margin-bottom: .2rem; }
-.item .msg { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.item .msg  { margin: 0; white-space: pre-wrap; word-break: break-word; }
 
-/* Reveal link style */
 .reveal-link {
   display: inline-block;
   margin-top: .3rem;
