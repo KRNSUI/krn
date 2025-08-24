@@ -13,19 +13,10 @@
       }
 
       // --- coin basics ---
-      let total = data.coin?.totalSupply;
-      const decimals = Number(data.coin?.decimals ?? 9);
-
-      // if total came back as an object, try common fields
-      if (total && typeof total === "object") {
-      total = total.total ?? total.amount ?? null;
-      }
-
-// Coerce to number if possible; otherwise show as-is
-if (elSupply) {
-  const n = Number(total);
-  elSupply.textContent = Number.isFinite(n) ? formatNumber(n) : String(total ?? "—");
-}
+      const name = data.coin?.name ?? "KRN";
+      const symbol = data.coin?.symbol ?? "KRN";
+      const decimals = data.coin?.decimals ?? 9;
+      const total = data.coin?.totalSupply ?? null;
 
       // fill text nodes
       const elName = $("#coinName");

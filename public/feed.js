@@ -31,6 +31,8 @@
   }
 
   // ---------- UTIL ----------
+  const PREVIEW_LIMIT = 1000; // show expand only if > 1000 chars OR censored
+
   function escapeHtml(s) {
     return String(s)
       .replaceAll("&", "&amp;")
@@ -59,7 +61,7 @@
     return [];
   }
 
-  // ---------- RENDER ----------
+  // ---------- LOAD ----------
   async function load() {
     try {
       const res = await fetch("/complaints?limit=120", { cache: "no-store" });
@@ -74,28 +76,25 @@
 
       const html = list.map(renderItem).join("");
       feedEl.innerHTML = html;
-
-      // wire up toggles
-      feedEl.querySelectorAll("button[data-toggle]").forEach((btn) => {
-        btn.addEventListener("click", onToggle);
-      });
     } catch (e) {
       console.error("feed load error:", e);
       feedEl.innerHTML = `<div class="muted s">Could not load complaints.</div>`;
     }
   }
 
+  // ---------- RENDER EACH ITEM ----------
   function renderItem(it) {
     const id = String(it.id ?? it.ID ?? it.rowid ?? "");
     const d = pickTime(it);
     const when = d ? d.toLocaleString() : "";
     const raw = pickText(it);
-    const { text: clean } = censorText(raw);
-    const preview = truncate(clean, 1000);
 
-    const sensitive = !!(it.is_sensitive ?? it.sensitive ?? it.flag_sensitive);
-    const btnLabel = sensitive ? "Reveal (sensitive)" : "Show more";
-    const sensAttr = sensitive ? 'data-sensitive="1"' : "";
+    // censored preview
+    const { text: censored } = censorText(raw);
+
+    const preview = truncate(censored, PREVIEW_LIMIT);
+    // show expand if censored changed the text OR original text exceeds limit
+    const needsExpand = (censored !== raw) || (raw.length > PREVIEW_LIMIT);
 
     return `
       <div class="item" data-id="${escapeHtml(id)}">
@@ -104,59 +103,62 @@
           <span data-variant="short">${escapeHtml(preview)}</span>
           <span data-variant="full" style="display:none;"></span>
         </pre>
-        <button class="toggle btn s" data-toggle data-id="${escapeHtml(id)}" ${sensAttr}>${btnLabel}</button>
+        ${needsExpand ? `<a href="#" class="reveal-link" data-id="${escapeHtml(id)}" data-state="closed">show more</a>` : ""}
       </div>
     `;
   }
 
-  async function onToggle(ev) {
-    const btn = ev.currentTarget;
-    const id = btn.getAttribute("data-id") || "";
-    const itemEl = btn.closest(".item");
+  // ---------- REVEAL/COLLAPSE HANDLER (event delegation) ----------
+  feedEl.addEventListener("click", async (ev) => {
+    const link = ev.target.closest(".reveal-link");
+    if (!link) return;
+    ev.preventDefault();
+
+    const id = link.getAttribute("data-id") || "";
+    const state = link.getAttribute("data-state") || "closed";
+    const itemEl = link.closest(".item");
     if (!itemEl) return;
 
     const shortSpan = itemEl.querySelector('span[data-variant="short"]');
     const fullSpan = itemEl.querySelector('span[data-variant="full"]');
-    const isSensitive = btn.hasAttribute("data-sensitive");
-    const showingShort = shortSpan && shortSpan.style.display !== "none";
 
-    // Already fetched or non-sensitive -> just toggle
-    if (!isSensitive || fullSpan?.getAttribute("data-fetched") === "1") {
-      if (showingShort) {
-        shortSpan.style.display = "none";
+    if (state === "closed") {
+      try {
+        link.textContent = "loading…";
+        link.classList.add("is-loading");
+
+        // fetch raw, uncensored text
+        const rr = await fetch(`/complaints?id=${encodeURIComponent(id)}&reveal=1`, {
+          cache: "no-store",
+        });
+        const one = await rr.json();
+        const fullRaw = one?.complaint?.text ?? one?.complaint?.message ?? "";
+
+        // Show the full ORIGINAL text (uncensored per your requirement)
+        fullSpan.textContent = fullRaw;
         fullSpan.style.display = "inline";
-        btn.textContent = "Show less";
-      } else {
-        shortSpan.style.display = "inline";
-        fullSpan.style.display = "none";
-        btn.textContent = isSensitive ? "Reveal (sensitive)" : "Show more";
+        shortSpan.style.display = "none";
+
+        link.textContent = "show less";
+        link.setAttribute("data-state", "open");
+      } catch (err) {
+        console.error("reveal error:", err);
+        link.textContent = "show more";
+        alert("Failed to reveal.");
+      } finally {
+        link.classList.remove("is-loading");
       }
       return;
     }
 
-    // Sensitive & not fetched yet
-    try {
-      btn.disabled = true;
-      const rr = await fetch(`/complaints?id=${encodeURIComponent(id)}&reveal=1`, {
-        cache: "no-store",
-      });
-      const one = await rr.json();
-      const fullRaw = one?.complaint?.text ?? one?.complaint?.message ?? "";
-      const { text: full } = censorText(fullRaw);
-
-      fullSpan.textContent = full;
-      fullSpan.setAttribute("data-fetched", "1");
-
-      shortSpan.style.display = "none";
-      fullSpan.style.display = "inline";
-      btn.textContent = "Show less";
-    } catch (e) {
-      console.error("reveal error:", e);
-      alert("Failed to reveal.");
-    } finally {
-      btn.disabled = false;
+    // collapse
+    if (state === "open") {
+      fullSpan.style.display = "none";
+      shortSpan.style.display = "inline";
+      link.textContent = "show more";
+      link.setAttribute("data-state", "closed");
     }
-  }
+  });
 
   load();
 })();

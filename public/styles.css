@@ -254,3 +254,19 @@ textarea{ min-height:10rem }
 .holders li:last-child { border-bottom: 0; }
 .holders .addr { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 70%; }
 .holders .amt { font-weight:600; }
+
+/* inline "show more" / "show less" link */
+.reveal-link {
+  display: inline-block;
+  margin-top: .35rem;
+  font-size: .9rem;
+  color: var(--accent);
+  text-decoration: none;
+  opacity: .9;
+}
+.reveal-link:hover { text-decoration: underline; opacity: 1; }
+.reveal-link.is-loading { pointer-events: none; opacity: .6; }
+
+/* optional tidy spacing */
+.item .time { margin-bottom: .25rem; }
+.item .msg { margin: 0; white-space: pre-wrap; word-break: break-word; }
