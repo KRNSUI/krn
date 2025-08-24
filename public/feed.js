@@ -1,36 +1,11 @@
 // public/feed.js
+import { censorText } from "./censor.js";
+
 (() => {
   const feedEl = document.getElementById("feed");
   if (!feedEl) return;
 
-  // ---------- CENSORING (local copy) ----------
-  const BANNED_PATTERNS = [
-    /\b(ni+g+g+e*r+|chink|sp[i1]c|k[i1]ke|raghead|g[o0]o+k)\b/gi,
-    /\b(fag|f[a@]gg?o+t|dyke)\b/gi,
-    /\b(fuck(?:ing|er)?|sh[i1]t|bullsh[i1]t|asshole|cunt|bitch|motherfucker)\b/gi,
-    /\b(anal|blowjob|handjob|cumshot|deepthroat|xxx|porn|hentai)\b/gi,
-  ];
-  const ADDRESS_RE = /\b0x[a-fA-F0-9]{10,}\b/g;
-
-  function censorText(s) {
-    let text = String(s || "");
-    let flagged = false;
-
-    if (ADDRESS_RE.test(text)) {
-      flagged = true;
-      text = text.replace(ADDRESS_RE, (m) => `${m.slice(0, 4)}…[redacted]`);
-    }
-    for (const re of BANNED_PATTERNS) {
-      re.lastIndex = 0;
-      if (re.test(text)) {
-        flagged = true;
-        text = text.replace(re, (m) => (m.length >= 6 ? "[censored]" : "***"));
-      }
-    }
-    return { text: text.trim(), flagged };
-  }
-
-  // ---------- UTIL ----------
+  /* ---------------- Utils ---------------- */
   const $esc = (s) =>
     String(s)
       .replaceAll("&", "&amp;")
@@ -39,45 +14,40 @@
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
 
-  function pickTime(it) {
-    const v = it.created_at ?? it.createdAt ?? it.created ?? it.time ?? it.timestamp;
+  const toB64 = (s) => btoa(unescape(encodeURIComponent(String(s))));
+  const fromB64 = (b) => decodeURIComponent(escape(atob(String(b))));
+
+  const twoLinePreview = (text) => text.split(/\r?\n/).slice(0, 2).join("\n");
+
+  const pickTime = (it) => {
+    const v =
+      it.created_at ?? it.createdAt ?? it.created ?? it.time ?? it.timestamp;
     const d = v ? new Date(v) : new Date(NaN);
     return Number.isFinite(d.getTime()) ? d : null;
-  }
+  };
 
-  function pickText(it) {
-    return it.text ?? it.message ?? "";
-  }
+  const pickText = (it) => it.text ?? it.message ?? "";
 
-  function normalizeList(payload) {
+  const normalizeList = (payload) => {
     if (Array.isArray(payload)) return payload;
     if (Array.isArray(payload?.items)) return payload.items;
     if (Array.isArray(payload?.results)) return payload.results;
     if (Array.isArray(payload?.rows)) return payload.rows;
     if (Array.isArray(payload?.data)) return payload.data;
     return [];
-  }
+  };
 
-  // Try common shapes coming back from /complaints?id=&reveal=1
-  function extractFullText(obj) {
+  const extractFullText = (obj) => {
     if (!obj) return "";
     if (obj.complaint?.text) return String(obj.complaint.text);
     if (obj.complaint?.message) return String(obj.complaint.message);
     if (typeof obj.complaint === "string") return obj.complaint;
-
     if (obj.text) return String(obj.text);
     if (obj.message) return String(obj.message);
-
-    if (obj.data?.text) return String(obj.data.text);
-    if (obj.data?.message) return String(obj.data.message);
-
-    if (obj.item?.text) return String(obj.item.text);
-    if (obj.item?.message) return String(obj.item.message);
-
     return "";
-  }
+  };
 
-  // ---------- LOAD ----------
+  /* ---------------- Load feed ---------------- */
   async function load() {
     try {
       const res = await fetch("/complaints?limit=120", { cache: "no-store" });
@@ -97,39 +67,38 @@
     }
   }
 
-  // ---------- RENDER EACH ITEM ----------
+  /* ---------------- Render each item ---------------- */
   function renderItem(it) {
     const id = String(it.id ?? it.ID ?? it.rowid ?? "");
-    const d = pickTime(it);
-    const when = d ? d.toLocaleString() : "";
+    const when = (pickTime(it) || new Date()).toLocaleString();
 
     const raw = pickText(it);
+    const rawB64 = toB64(raw);
+
     const { text: censored } = censorText(raw);
+    const preview = twoLinePreview(censored);
 
-    // 2-line preview logic
-    const lines = censored.split(/\r?\n/);
-    const preview = lines.slice(0, 2).join("\n");
-
-    // Show link if the text was censored OR original has > 2 lines
-    const needsExpand = (censored !== raw) || (lines.length > 2);
+    const needsReveal = censored !== raw || raw.split(/\r?\n/).length > 2;
 
     return `
-      <div class="item" data-id="${$esc(id)}">
+      <div class="item" data-id="${$esc(id)}" data-raw-b64="${$esc(rawB64)}">
         <div class="time">${$esc(when)}</div>
         <pre class="msg">
-          <span data-variant="short" style="display:inline;">${$esc(preview)}</span>
-          <span data-variant="full" style="display:none;"></span>
+          <span data-variant="short" class="inline">${$esc(preview)}</span>
+          <span data-variant="full" class="inline hidden"></span>
         </pre>
         ${
-          needsExpand
-            ? `<a href="#" class="reveal-link" data-id="${$esc(id)}" data-state="closed">Reveal original</a>`
+          needsReveal
+            ? `<a href="#" class="reveal-link" data-id="${$esc(
+                id
+              )}" data-state="closed">Reveal original</a>`
             : ""
         }
       </div>
     `;
   }
 
-  // ---------- CLICK: reveal / hide ----------
+  /* ---------------- Reveal / hide original ---------------- */
   feedEl.addEventListener("click", async (ev) => {
     const link = ev.target.closest(".reveal-link");
     if (!link) return;
@@ -148,33 +117,37 @@
         link.textContent = "Loading…";
         link.classList.add("is-loading");
 
-        const r = await fetch(`/complaints?id=${encodeURIComponent(id)}&reveal=1`, {
-          cache: "no-store",
-        });
-        const payload = await r.json();
-        const fullRaw = extractFullText(payload);
+        let fullRaw = "";
+        try {
+          const r = await fetch(
+            `/complaints?id=${encodeURIComponent(id)}&reveal=1`,
+            { cache: "no-store" }
+          );
+          const payload = await r.json().catch(() => ({}));
+          fullRaw = extractFullText(payload);
+        } catch {}
 
-        // Show the full ORIGINAL text (uncensored)
+        if (!fullRaw) {
+          const b64 = itemEl.getAttribute("data-raw-b64") || "";
+          if (b64) {
+            try {
+              fullRaw = fromB64(b64);
+            } catch {}
+          }
+        }
+
         fullSpan.textContent = fullRaw || "(no content)";
+        fullSpan.classList.remove("hidden");
+        shortSpan.classList.add("hidden");
 
-        shortSpan.style.display = "none";
-        fullSpan.style.display = "inline";
         link.textContent = "Hide original";
         link.setAttribute("data-state", "open");
-      } catch (err) {
-        console.error("reveal error:", err);
-        link.textContent = "Reveal original";
-        alert("Failed to reveal.");
       } finally {
         link.classList.remove("is-loading");
       }
-      return;
-    }
-
-    // collapse
-    if (state === "open") {
-      fullSpan.style.display = "none";
-      shortSpan.style.display = "inline";
+    } else {
+      fullSpan.classList.add("hidden");
+      shortSpan.classList.remove("hidden");
       link.textContent = "Reveal original";
       link.setAttribute("data-state", "closed");
     }
