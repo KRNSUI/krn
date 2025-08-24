@@ -13,10 +13,22 @@
       }
 
       // --- coin basics ---
-      const name = data.coin?.name ?? "KRN";
-      const symbol = data.coin?.symbol ?? "KRN";
-      const decimals = data.coin?.decimals ?? 9;
-      const total = data.coin?.totalSupply ?? null;
+      const coin = data.coin || {};
+      const name = coin.name ?? coin.metadata?.name ?? "KRN";
+      const symbol = coin.symbol ?? coin.metadata?.symbol ?? "KRN";
+      const decimals = toInt(coin.decimals, 9);
+
+      // Total Supply:
+      // 1) if coin.totalSupply is already human-readable, show it
+      // 2) else, if coin.totalSupplyRaw exists, scale by `decimals`
+      // 3) else, show em dash
+      let supplyText = "—";
+      if (isPresent(coin.totalSupply)) {
+        supplyText = String(coin.totalSupply);
+      } else if (isPresent(coin.totalSupplyRaw)) {
+        const human = toHumanBigInt(String(coin.totalSupplyRaw), decimals, 4);
+        supplyText = human;
+      }
 
       // fill text nodes
       const elName = $("#coinName");
@@ -24,7 +36,7 @@
       const elSupply = $("#coinSupply");
       if (elName) elName.textContent = name;
       if (elSymbol) elSymbol.textContent = symbol;
-      if (elSupply) elSupply.textContent = formatNumber(total, decimals);
+      if (elSupply) elSupply.textContent = supplyText;
 
       // --- holders list ---
       const holders = Array.isArray(data.topHolders) ? data.topHolders : [];
@@ -35,12 +47,16 @@
           ul.innerHTML = `<li class="muted s">No holders returned.</li>`;
         } else {
           for (const h of holders) {
-            const amount = formatNumber(h?.amount, decimals);
+            const rawAmt = h?.amount ?? h?.balance ?? h?.value;
+            // amount may be bigint string → scale by decimals, else show as-is
+            const amtHuman = isPresent(rawAmt)
+              ? toHumanMaybe(rawAmt, decimals)
+              : "—";
             const addr = h?.owner || h?.address || "(unknown)";
             const li = document.createElement("li");
             li.innerHTML = `
               <span class="addr">${escapeHtml(addr)}</span>
-              <span class="amt">${amount}</span>
+              <span class="amt">${escapeHtml(amtHuman)}</span>
             `;
             ul.appendChild(li);
           }
@@ -58,6 +74,7 @@
 
       // optional warning
       if (data.warnings?.txWarning) {
+        // keep silent or log; leaving as console.warn
         console.warn("tx warning:", data.warnings.txWarning);
       }
     } catch (e) {
@@ -99,12 +116,13 @@
 
     // bars
     const n = values.length;
-    const barW = Math.max(1, Math.floor(gw / n) - 3);
+    const cellW = Math.floor(gw / n);
+    const barW = Math.max(1, cellW - 3);
     ctx.fillStyle = "#ff7b00"; // degenerate orange
     for (let i = 0; i < n; i++) {
       const v = values[i];
       const bh = Math.round((v / max) * gh);
-      const x = pad + i * Math.floor(gw / n);
+      const x = pad + i * cellW;
       const y = h - pad - bh;
       ctx.fillRect(x, y, barW, bh);
     }
@@ -127,15 +145,53 @@
     ctx.fillText(short, w - pad - 28, h - pad + 16);
   }
 
-  function formatNumber(v, decimals = 0) {
-    if (v == null) return "—";
-    // totalSupply may already be a decimalized string; try to be safe
-    const num = Number(v);
-    if (!Number.isFinite(num)) return String(v);
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-    if (num >= 1e3) return (num / 1e3).toFixed(2) + "k";
-    return num.toLocaleString();
+  // --- helpers ---
+  function isPresent(v) {
+    return v !== undefined && v !== null && v !== "";
+  }
+
+  function toInt(v, def = 0) {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : def;
+  }
+
+  // Convert big-int string + decimals → human string (e.g., "123.4567")
+  function toHumanBigInt(raw, decimals, maxFrac = 4) {
+    const neg = String(raw).startsWith("-");
+    let s = neg ? String(raw).slice(1) : String(raw);
+    s = s.replace(/\D/g, "") || "0"; // keep digits only
+    // pad so we can slice decimals reliably
+    const pad = s.padStart(decimals + 1, "0");
+    let int = pad.slice(0, pad.length - decimals);
+    let frac = pad.slice(pad.length - decimals);
+    // trim and limit fractional precision
+    frac = frac.replace(/0+$/g, "").slice(0, maxFrac);
+    int = int.replace(/^0+(?=\d)/, "");
+    const out = (neg ? "-" : "") + (int || "0") + (frac ? "." + frac : "");
+    return out;
+  }
+
+  // If it's a number or formatted string, show it;
+  // if it's a bigint string, convert using decimals
+  function toHumanMaybe(val, decimals) {
+    if (!isPresent(val)) return "—";
+    const asNum = Number(val);
+    if (Number.isFinite(asNum)) {
+      return formatNumber(asNum);
+    }
+    // probably a big-int string
+    const human = toHumanBigInt(String(val), decimals, 4);
+    return formatNumber(Number(human)) || human;
+  }
+
+  function formatNumber(n) {
+    if (!Number.isFinite(n)) return String(n);
+    if (n >= 1e12) return (n / 1e12).toFixed(2) + "T";
+    if (n >= 1e9)  return (n / 1e9 ).toFixed(2) + "B";
+    if (n >= 1e6)  return (n / 1e6 ).toFixed(2) + "M";
+    if (n >= 1e3)  return (n / 1e3 ).toFixed(2) + "k";
+    if (n < 1 && n > 0) return n.toPrecision(3);
+    return n.toLocaleString();
   }
 
   function escapeHtml(s) {
@@ -147,6 +203,5 @@
       .replaceAll("'", "&#039;");
   }
 
-  // kickoff
   document.addEventListener("DOMContentLoaded", load);
 })();
