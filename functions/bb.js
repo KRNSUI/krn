@@ -13,48 +13,74 @@ export async function onRequest({ request, env }) {
 
   const headers = {
     accept: "application/json",
+    "content-type": "application/json",
     "x-api-key": env.BB_API_KEY,
   };
 
-  // small helper
-  const fetchJSON = async (path) => {
+  // small helpers
+  const getJSON = async (path) => {
     const url = `https://api.blockberry.one/sui/v1${path}`;
-    const r = await fetch(url, { headers });
+    const r = await fetch(url, { headers, method: "GET" });
     const text = await r.text();
     if (!r.ok) throw new Error(`${path} → ${r.status}: ${truncate(text, 240)}`);
-    return JSON.parse(text);
+    return JSON.parse(text || "{}");
+  };
+
+  const postJSON = async (path, bodyObj) => {
+    const url = `https://api.blockberry.one/sui/v1${path}`;
+    const r = await fetch(url, {
+      headers,
+      method: "POST",
+      body: JSON.stringify(bodyObj || {}),
+    });
+    const text = await r.text();
+    if (!r.ok) throw new Error(`${path} → ${r.status}: ${truncate(text, 240)}`);
+    return JSON.parse(text || "{}");
   };
 
   try {
     // 1) Core coin info (includes total supply + decimals/symbol)
-    const supply = await fetchJSON(`/coins/${encodeURIComponent(coinType)}`);
+    const supply = await getJSON(`/coins/${encodeURIComponent(coinType)}`);
 
     // 2) Coin metadata (name/logo/etc.)
-    const metadata = await fetchJSON(
+    const metadata = await getJSON(
       `/coins/metadata/${encodeURIComponent(coinType)}`
     ).catch(() => null); // metadata may not always exist
 
     // 3) Top holders
-    const holders = await fetchJSON(
+    const holders = await getJSON(
       `/coins/${encodeURIComponent(
         coinType
       )}/holders?page=0&size=${pageSize}&orderBy=DESC&sortBy=AMOUNT`
     ).catch(() => ({ data: [] }));
 
-    // 4) Try transactions → bucket to counts per hour (used for chart)
-    //    If this endpoint returns 400/404 for your coin, we just return an empty series.
+    // 4) Transactions (POST) → bucket to counts per hour (used for chart)
     let labels = [];
     let series = [];
     let txWarning = null;
 
     try {
-      const limit = Math.max(50, Math.min(500, hours * 20));
-      const tx = await fetchJSON(
-        `/coins/${encodeURIComponent(
-          coinType
-        )}/transactions?page=0&size=${limit}`
-      );
-      const items = Array.isArray(tx?.data) ? tx.data : Array.isArray(tx) ? tx : [];
+      const limit = Math.max(50, Math.min(500, hours * 20)); // heuristic ~20 tx/hour
+      // Primary: POST /coins/{coinType}/transactions
+      let tx = await postJSON(
+        `/coins/${encodeURIComponent(coinType)}/transactions`,
+        { page: 0, size: limit }
+      ).catch(async (e) => {
+        // Fallback path (if provider changes route shape)
+        // POST /transactions/by-coin-type?coinType=...
+        try {
+          const fb = await postJSON(
+            `/transactions/by-coin-type?coinType=${encodeURIComponent(coinType)}&page=0&size=${limit}`,
+            {}
+          );
+          return fb;
+        } catch {
+          throw e;
+        }
+      });
+
+      // normalize item array out of common shapes
+      const items = normalizeList(tx);
       const cutoff = Date.now() - hours * 3600 * 1000;
       const buckets = new Map();
 
@@ -85,7 +111,7 @@ export async function onRequest({ request, env }) {
         totalSupply: supply?.total, // may be number or string per provider
         metadata,
       },
-      topHolders: holders?.data ?? [],
+      topHolders: normalizeList(holders),
       priceSeries: { labels, series }, // actually tx/hour series (rename in UI as needed)
       warnings: txWarning ? { txWarning } : undefined,
     });
@@ -100,6 +126,16 @@ function clampInt(v, def, min, max) {
   const n = parseInt(v ?? def, 10);
   if (Number.isNaN(n)) return def;
   return Math.max(min, Math.min(max, n));
+}
+
+function normalizeList(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.list)) return payload.list;
+  if (Array.isArray(payload?.content)) return payload.content;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
 }
 
 function pickTimestampMs(it) {

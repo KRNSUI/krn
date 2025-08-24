@@ -254,3 +254,45 @@ textarea{ min-height:10rem }
 .holders li:last-child { border-bottom: 0; }
 .holders .addr { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 70%; }
 .holders .amt { font-weight:600; }
+
+/* Feed item compact mode when no reveal link */
+.item {
+  padding: .55rem .25rem;
+  border-bottom: 1px solid #3a2415;
+}
+.item:last-child { border-bottom: 0; }
+
+.item .time {
+  margin-bottom: .2rem;
+  font-size: .8rem;
+  color: var(--muted);
+}
+.item .msg {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* If no reveal link inside the item → compact spacing */
+.item:not(:has(.reveal-link)) {
+  padding-bottom: .35rem;
+}
+.item:not(:has(.reveal-link)) .msg {
+  margin-bottom: 0;
+}
+
+/* Reveal link styling */
+.reveal-link {
+  display: inline-block;
+  margin-top: .3rem;
+  font-size: .9rem;
+  color: var(--accent);
+  text-decoration: none;
+  opacity: .9;
+}
+.reveal-link:hover { text-decoration: underline; opacity: 1; }
+.reveal-link.is-loading { pointer-events: none; opacity: .6; }
+
+/* Inline toggle helpers */
+.inline { display: inline; }
+.hidden { display: none !important; }
