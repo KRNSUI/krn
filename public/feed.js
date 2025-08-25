@@ -67,36 +67,45 @@ import { censorText } from "./censor.js";
     }
   }
 
-  /* ---------------- Render each item ---------------- */
-  function renderItem(it) {
-    const id = String(it.id ?? it.ID ?? it.rowid ?? "");
-    const when = (pickTime(it) || new Date()).toLocaleString();
+/* ---------------- Render each item ---------------- */
+function renderItem(it) {
+  const id = String(it.id ?? it.ID ?? it.rowid ?? "");
+  const when = (pickTime(it) || new Date()).toLocaleString();
 
-    const raw = pickText(it);
-    const rawB64 = toB64(raw);
+  const raw = pickText(it);
+  const rawB64 = toB64(raw);
 
-    const { text: censored } = censorText(raw);
-    const preview = twoLinePreview(censored);
+  const { text: censored } = censorText(raw);
 
-    const needsReveal = censored !== raw || raw.split(/\r?\n/).length > 2;
+  // Always feed the full censored text into the short span; CSS clamp makes it 2 lines
+  const preview = censored;
 
-    return `
-      <div class="item" data-id="${$esc(id)}" data-raw-b64="${$esc(rawB64)}">
-        <div class="time">${$esc(when)}</div>
-        <pre class="msg">
-          <span data-variant="short" class="inline">${$esc(preview)}</span>
-          <span data-variant="full" class="inline hidden"></span>
-        </pre>
-        ${
-          needsReveal
-            ? `<a href="#" class="reveal-link" data-id="${$esc(
-                id
-              )}" data-state="closed">Reveal original</a>`
-            : ""
-        }
-      </div>
-    `;
-  }
+  // Reveal is needed if:
+  //   - something got censored, OR
+  //   - more than 2 line breaks, OR
+  //   - it’s just a very long single paragraph
+  const needsReveal =
+    censored !== raw ||
+    raw.split(/\r?\n/).length > 2 ||
+    censored.length > 220; // ~2 lines worth of chars
+
+  return `
+    <div class="item" data-id="${$esc(id)}" data-raw-b64="${$esc(rawB64)}">
+      <div class="time">${$esc(when)}</div>
+      <pre class="msg">
+        <span data-variant="short" class="inline">${$esc(preview)}</span>
+        <span data-variant="full" class="inline hidden"></span>
+      </pre>
+      ${
+        needsReveal
+          ? `<a href="#" class="reveal-link" data-id="${$esc(
+              id
+            )}" data-state="closed">Reveal original</a>`
+          : ""
+      }
+    </div>
+  `;
+}
   
 // ---------- CLICK: reveal / hide ----------
 feedEl.addEventListener("click", async (ev) => {
