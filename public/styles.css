@@ -255,44 +255,69 @@ textarea{ min-height:10rem }
 .holders .addr { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 70%; }
 .holders .amt { font-weight:600; }
 
-/* Feed item compact mode when no reveal link */
-.item {
-  padding: .55rem .25rem;
+.inline { display: inline; }
+.hidden { display: none !important; }
+
+/* ---- Feed Items (clean + compact) ---- */
+
+/* Base item */
+.item{
+  padding: .45rem .25rem;              /* compact by default */
   border-bottom: 1px solid #3a2415;
 }
-.item:last-child { border-bottom: 0; }
+.item:last-child{ border-bottom: 0; }
 
-.item .time {
-  margin-bottom: .2rem;
+.item .time{
   font-size: .8rem;
   color: var(--muted);
+  margin: .2rem 0 .15rem;
 }
-.item .msg {
+
+.item .msg{
   margin: 0;
-  white-space: pre-wrap;
+  white-space: pre-wrap;               /* keep author line breaks in full view */
   word-break: break-word;
 }
 
-/* If no reveal link inside the item → compact spacing */
-.item:not(:has(.reveal-link)) {
-  padding-bottom: .35rem;
-}
-.item:not(:has(.reveal-link)) .msg {
-  margin-bottom: 0;
+/* 2-line preview for the SHORT variant only */
+.item .msg [data-variant="short"]{
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;               /* <-- show two lines */
+  overflow: hidden;
+
+  /* make <pre> behave like a paragraph for preview */
+  white-space: normal;
+  line-height: 1.4;
+  max-height: calc(2 * 1.4em);
+
+  /* subtle bottom fade so truncation looks intentional */
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 70%, rgba(0,0,0,0));
+          mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 70%, rgba(0,0,0,0));
 }
 
-/* Reveal link styling */
-.reveal-link {
+/* Full variant (shown when your JS toggles) */
+.item .msg [data-variant="full"]{
+  display: inline;
+  white-space: pre-wrap;
+}
+
+/* Reveal link */
+.reveal-link{
   display: inline-block;
-  margin-top: .3rem;
+  margin-top: .25rem;
   font-size: .9rem;
   color: var(--accent);
   text-decoration: none;
   opacity: .9;
 }
-.reveal-link:hover { text-decoration: underline; opacity: 1; }
-.reveal-link.is-loading { pointer-events: none; opacity: .6; }
+.reveal-link:hover{ text-decoration: underline; opacity: 1; }
+.reveal-link.is-loading{ pointer-events: none; opacity: .6; }
 
-/* Inline toggle helpers */
-.inline { display: inline; }
-.hidden { display: none !important; }
+/* Extra compact when there is NO reveal link (short posts) */
+.item:not(:has(.reveal-link)){ padding-bottom: .3rem; }
+.item:not(:has(.reveal-link)) .msg{ margin: .1rem 0; }
+
+/* Helpers your JS already uses */
+.inline{ display: inline; }
+.hidden{ display: none !important; }
