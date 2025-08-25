@@ -1,4 +1,4 @@
-# KRN — Anonymous KUMplaints (Cloudflare Pages + D1)
+# KRN — Anonymous Complaints (Cloudflare Pages + D1)
 
 ## What this is
 - Static HTML site with a form.

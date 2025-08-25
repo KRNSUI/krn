@@ -1,20 +1,20 @@
-# 🪙 $KRN — Anonymous KUMplaint Platform
+# 🪙 $KRN — Anonymous Complaint Platform
 
 [![Buy on Blast.fun](https://img.shields.io/badge/Buy-KRN%20on%20Blast.fun-6ee7ff?style=for-the-badge&logo=coinbase)](https://blast.fun/token/0x76ff24af704e0b6d6a121ab23e5ea9e8343c29a0c50f664ab0f01b2f2858c758?ref=Aemon)
 [![Sui Explorer](https://img.shields.io/badge/View%20on-Suiscan-blue?style=for-the-badge&logo=sui)](https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs)
 ![Cloudflare Pages](https://img.shields.io/badge/Hosted%20on-Cloudflare%20Pages-F38020?style=for-the-badge&logo=cloudflare)
 ![MIT License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-1. **Anonymous KUMplaints** — A simple web app where anyone can drop a complaint without names, emails, or tracking.  
+1. **Anonymous Complaints** — A simple web app where anyone can drop a complaint without names, emails, or tracking.  
 2. **KRN Token** — A token on Sui with utility and governance potential in this ecosystem.
 
 ---
 
 ## 🌐 Website
-👉 [Anonymous KUMplaint Platform](https://krn.fuck-out.com)
+👉 [Anonymous Complaint Platform](https://krn.fuck-out.com)
 
-- Submit KUMplaints anonymously.
-- Recent KUMplaints are displayed publicly.
+- Submit Complaints anonymously.
+- Recent Complaints are displayed publicly.
 - Integrated live chart of the $KRN token on Sui.
 
 ---
@@ -54,7 +54,7 @@ The KRN project and its maintainers:
 ## 🛠️ Development
 This project is built with:
 - **Cloudflare Pages** (static hosting)  
-- **Cloudflare Workers & D1** (serverless + database for KUMplaints)  
+- **Cloudflare Workers & D1** (serverless + database for Complaints)  
 - **Vanilla HTML, CSS, JS** (no Node build required)
 
 ### Local Preview
