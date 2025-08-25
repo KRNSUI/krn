@@ -14,14 +14,20 @@ import { censorText } from "./censor.js";
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
 
+  // safe base64 helpers (for fallback reveal)
   const toB64 = (s) => btoa(unescape(encodeURIComponent(String(s))));
   const fromB64 = (b) => decodeURIComponent(escape(atob(String(b))));
 
-  const twoLinePreview = (text) => text.split(/\r?\n/).slice(0, 2).join("\n");
+  // Preview: show first 2 lines; if it’s basically a single long line, clamp by characters.
+  const MAX_PREVIEW_CHARS = 240;
+  function twoLineOrChars(text) {
+    const lines = String(text).split(/\r?\n/);
+    if (lines.length > 1) return lines.slice(0, 2).join("\n");
+    return text.length > MAX_PREVIEW_CHARS ? text.slice(0, MAX_PREVIEW_CHARS) + "…" : text;
+  }
 
   const pickTime = (it) => {
-    const v =
-      it.created_at ?? it.createdAt ?? it.created ?? it.time ?? it.timestamp;
+    const v = it.created_at ?? it.createdAt ?? it.created ?? it.time ?? it.timestamp;
     const d = v ? new Date(v) : new Date(NaN);
     return Number.isFinite(d.getTime()) ? d : null;
   };
@@ -37,15 +43,23 @@ import { censorText } from "./censor.js";
     return [];
   };
 
-  const extractFullText = (obj) => {
+  // Robust text extractor for /complaints?id=&reveal=1
+  function extractFullText(obj) {
     if (!obj) return "";
+    // common shapes
     if (obj.complaint?.text) return String(obj.complaint.text);
     if (obj.complaint?.message) return String(obj.complaint.message);
     if (typeof obj.complaint === "string") return obj.complaint;
     if (obj.text) return String(obj.text);
     if (obj.message) return String(obj.message);
+    // other likely nests
+    if (obj.data?.text) return String(obj.data.text);
+    if (obj.data?.message) return String(obj.data.message);
+    if (obj.item?.text) return String(obj.item.text);
+    if (obj.item?.message) return String(obj.item.message);
+    // nothing found
     return "";
-  };
+  }
 
   /* ---------------- Load feed ---------------- */
   async function load() {
@@ -67,107 +81,97 @@ import { censorText } from "./censor.js";
     }
   }
 
-/* ---------------- Render each item ---------------- */
-function renderItem(it) {
-  const id = String(it.id ?? it.ID ?? it.rowid ?? "");
-  const when = (pickTime(it) || new Date()).toLocaleString();
+  /* ---------------- Render each item ---------------- */
+  function renderItem(it) {
+    const id = String(it.id ?? it.ID ?? it.rowid ?? "");
+    const when = (pickTime(it) || new Date()).toLocaleString();
 
-  const raw = pickText(it);
-  const rawB64 = toB64(raw);
+    const raw = pickText(it);
+    const rawB64 = toB64(raw);
 
-  const { text: censored } = censorText(raw);
+    // Censor for the preview only
+    const { text: censored } = censorText(raw);
+    const preview = twoLineOrChars(censored);
 
-  // Always feed the full censored text into the short span; CSS clamp makes it 2 lines
-  const preview = censored;
+    // Decide if we need a reveal link:
+    // 1) censoring changed text, OR
+    // 2) 3+ lines in raw, OR
+    // 3) very long single-line (by characters) in censored view
+    const lineCount = String(raw).split(/\r?\n/).length;
+    const needsReveal = (censored !== raw) || (lineCount > 2) || (censored.length > MAX_PREVIEW_CHARS);
 
-  // Reveal is needed if:
-  //   - something got censored, OR
-  //   - more than 2 line breaks, OR
-  //   - it’s just a very long single paragraph
-  const needsReveal =
-    censored !== raw ||
-    raw.split(/\r?\n/).length > 2 ||
-    censored.length > 220; // ~2 lines worth of chars
-
-  return `
-    <div class="item" data-id="${$esc(id)}" data-raw-b64="${$esc(rawB64)}">
-      <div class="time">${$esc(when)}</div>
-      <pre class="msg">
-        <span data-variant="short" class="inline">${$esc(preview)}</span>
-        <span data-variant="full" class="inline hidden"></span>
-      </pre>
-      ${
-        needsReveal
-          ? `<a href="#" class="reveal-link" data-id="${$esc(
-              id
-            )}" data-state="closed">Reveal original</a>`
-          : ""
-      }
-    </div>
-  `;
-}
-  
-// ---------- CLICK: reveal / hide ----------
-feedEl.addEventListener("click", async (ev) => {
-  const link = ev.target.closest(".reveal-link");
-  if (!link) return;
-  ev.preventDefault();
-
-  const id = link.getAttribute("data-id") || "";
-  const itemEl = link.closest(".item");
-  if (!itemEl) return;
-
-  const shortSpan = itemEl.querySelector('span[data-variant="short"]');
-  const fullSpan  = itemEl.querySelector('span[data-variant="full"]');
-
-  const open = link.getAttribute("data-state") === "open";
-
-  // HIDE
-  if (open) {
-    if (fullSpan) fullSpan.style.display = "none";
-    if (shortSpan) shortSpan.style.display = "inline";
-    link.setAttribute("data-state", "closed");
-    link.textContent = "Reveal original";
-    return;
+    return `
+      <div class="item" data-id="${$esc(id)}" data-raw-b64="${$esc(rawB64)}">
+        <div class="time">${$esc(when)}</div>
+        <pre class="msg">
+          <span data-variant="short" class="inline">${$esc(preview)}</span>
+          <span data-variant="full" class="inline hidden"></span>
+        </pre>
+        ${
+          needsReveal
+            ? `<a href="#" class="reveal-link" data-id="${$esc(id)}" data-state="closed">Reveal original</a>`
+            : ""
+        }
+      </div>
+    `;
   }
 
-  // SHOW
-  try {
-    link.textContent = "Loading…";
-    link.classList.add("is-loading");
+  /* ---------------- CLICK: reveal / hide ---------------- */
+  feedEl.addEventListener("click", async (ev) => {
+    const link = ev.target.closest(".reveal-link");
+    if (!link) return;
+    ev.preventDefault();
 
-    // fetch only once
-    if (!fullSpan.getAttribute("data-loaded")) {
-      const r = await fetch(`/complaints?id=${encodeURIComponent(id)}&reveal=1`, { cache: "no-store" });
-      const payload = await r.json();
+    const id = link.getAttribute("data-id") || "";
+    const itemEl = link.closest(".item");
+    if (!itemEl) return;
 
-      // robustly extract text shape
-      const fullRaw =
-        (payload?.complaint?.text) ??
-        (payload?.complaint?.message) ??
-        (payload?.text) ??
-        (payload?.message) ??
-        (payload?.data?.text) ??
-        (payload?.data?.message) ??
-        (typeof payload?.complaint === "string" ? payload.complaint : "");
+    const shortSpan = itemEl.querySelector('span[data-variant="short"]');
+    const fullSpan  = itemEl.querySelector('span[data-variant="full"]');
+    const open = link.getAttribute("data-state") === "open";
 
-      fullSpan.textContent = fullRaw || "(no content)";
-      fullSpan.setAttribute("data-loaded", "1");
+    // HIDE
+    if (open) {
+      if (fullSpan) fullSpan.style.display = "none";
+      if (shortSpan) shortSpan.style.display = "inline";
+      link.setAttribute("data-state", "closed");
+      link.textContent = "Reveal original";
+      return;
     }
 
-    // swap views
-    if (shortSpan) shortSpan.style.display = "none";
-    fullSpan.style.display = "inline";
-    link.setAttribute("data-state", "open");
-    link.textContent = "Hide original";
-  } catch (err) {
-    console.error("reveal error:", err);
-    link.textContent = "Reveal original";
-    alert("Failed to reveal.");
-  } finally {
-    link.classList.remove("is-loading");
-  }
-});
+    // SHOW
+    try {
+      link.textContent = "Loading…";
+      link.classList.add("is-loading");
+
+      let fullRaw = "";
+      if (!fullSpan.getAttribute("data-loaded")) {
+        const r = await fetch(`/complaints?id=${encodeURIComponent(id)}&reveal=1`, { cache: "no-store" });
+        const payload = await r.json();
+        fullRaw = extractFullText(payload);
+
+        // fallback to embedded original if API didn't give it
+        if (!fullRaw) {
+          const b64 = itemEl.getAttribute("data-raw-b64") || "";
+          try { fullRaw = fromB64(b64); } catch { /* ignore */ }
+        }
+
+        fullSpan.textContent = fullRaw || "(no content)";
+        fullSpan.setAttribute("data-loaded", "1");
+      }
+
+      if (shortSpan) shortSpan.style.display = "none";
+      fullSpan.style.display = "inline";
+      link.setAttribute("data-state", "open");
+      link.textContent = "Hide original";
+    } catch (err) {
+      console.error("reveal error:", err);
+      link.textContent = "Reveal original";
+      alert("Failed to reveal.");
+    } finally {
+      link.classList.remove("is-loading");
+    }
+  });
 
   load();
 })();
