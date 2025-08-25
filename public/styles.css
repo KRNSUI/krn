@@ -308,3 +308,35 @@ textarea{ min-height:10rem }
 }
 .feed-link:hover { text-decoration: underline; opacity: 1; }
 .feed-link.hidden { display: none; }
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem; /* smaller spacing */
+  margin: 0.5rem 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.45rem;   /* cut padding in half */
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.7rem;         /* smaller text */
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.2s, box-shadow 0.2s;
+  background: var(--acc1, #ff6a00);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25); /* tighter shadow */
+}
+
+.badge:hover {
+  background: var(--acc2, #ff8c1a);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+/* Brand accents */
+.badge.github { background: #24292e; }
+.badge.x { background: #000; }
+.badge.buy { background: var(--acc1, #ff6a00); }
+.badge.scan { background: #1a73e8; }
