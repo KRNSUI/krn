@@ -297,5 +297,14 @@ textarea{ min-height:10rem }
 .inline { display: inline; }
 .hidden { display: none !important; }
 
-#feed-controls { margin-top: .5rem; }
-#olderBtn[disabled] { opacity:.5; cursor:not-allowed; }
+.feed-link {
+  display: inline-block;
+  margin: .5rem .75rem;
+  font-size: .9rem;
+  color: var(--accent);
+  text-decoration: none;
+  opacity: .9;
+  cursor: pointer;
+}
+.feed-link:hover { text-decoration: underline; opacity: 1; }
+.feed-link.hidden { display: none; }
