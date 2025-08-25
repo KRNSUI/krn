@@ -1,0 +1,33 @@
+/* ---- Layout ---- */
+.krn-layout{ display:grid; gap:1.25rem }
+
+@media (min-width:700px){
+  .krn-layout{
+    grid-template-columns:1fr 1fr;
+    grid-template-areas:
+      "form feed"
+      "chart chart";
+    align-items:stretch;
+    grid-auto-rows:minmax(0,auto);
+  }
+  .form-col{ grid-area:form; display:flex; flex-direction:column }
+  .feed-col{ grid-area:feed; display:flex; flex-direction:column }
+  .chart-col{ grid-area:chart }
+}
+
+@media (min-width:700px){
+  .form-col .card{
+    min-height:70vh; display:flex; flex-direction:column;
+  }
+}
+
+@media (min-width:700px){
+  .feed{
+    height:100%;
+    max-height:70vh;
+    overflow:auto;
+    border-radius:16px;
+    background:var(--card);
+    border:1px solid var(--edge);
+  }
+}
