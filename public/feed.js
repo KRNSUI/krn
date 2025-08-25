@@ -1,3 +1,6 @@
+Here you go—kept your structure, only added the refresh wiring + a simple loading guard, and gave the refresh link the same `.feed-link` class so it inherits your styles.
+
+```js
 // public/feed.js
 import { censorText } from "./censor.js";
 
@@ -50,18 +53,20 @@ import { censorText } from "./censor.js";
     return "";
   };
 
-  /* ---------------- Inject “Older/Newer” text links (no HTML edits needed) ---------------- */
+  /* ---------------- Inject “Refresh / Older / Newer” links ---------------- */
   const nav = document.getElementById("feed-nav") || (() => {
     const d = document.createElement("div");
     d.id = "feed-nav";
     d.className = "feed-nav";
     d.innerHTML = `
+      <a href="#" id="refreshBtn" class="feed-link">⟳ Refresh</a>
       <a href="#" id="newer-link" class="feed-link hidden">← Newer</a>
       <a href="#" id="older-link" class="feed-link">Older →</a>
     `;
     feedEl.insertAdjacentElement("afterend", d);
     return d;
   })();
+  const refreshLink = nav.querySelector("#refreshBtn");
   const olderLink = nav.querySelector("#older-link");
   const newerLink = nav.querySelector("#newer-link");
 
@@ -73,16 +78,20 @@ import { censorText } from "./censor.js";
       .feed-link{display:inline-block;margin:.5rem .75rem;font-size:.9rem;color:var(--accent);text-decoration:none;opacity:.9;cursor:pointer}
       .feed-link:hover{text-decoration:underline;opacity:1}
       .feed-link.hidden{display:none}
+      .feed-link.is-loading{pointer-events:none;opacity:.6}
     `;
     document.head.appendChild(style);
   }
 
   /* ---------------- Paging state ---------------- */
-  let cursor = null;     // created_at of last visible item (for /complaints?before=…)
+  let cursor = null;      // created_at of last visible item (for /complaints?before=…)
   let hasHistory = false; // whether we've paged older at least once
+  let isLoading = false;  // simple guard to avoid double fetches
 
   /* ---------------- Load feed (supports append + cursor) ---------------- */
   async function load({ append = false } = {}) {
+    if (isLoading) return;
+    isLoading = true;
     try {
       const url = new URL("/complaints", location.origin);
       url.searchParams.set("limit", String(FETCH_LIMIT));
@@ -130,6 +139,8 @@ import { censorText } from "./censor.js";
       if (!append) {
         feedEl.innerHTML = `<div class="muted s">Could not load complaints.</div>`;
       }
+    } finally {
+      isLoading = false;
     }
   }
 
@@ -153,13 +164,9 @@ import { censorText } from "./censor.js";
           <span data-variant="short" class="inline">${$esc(preview)}</span>
           <span data-variant="full" class="inline hidden"></span>
         </pre>
-        ${
-          needsReveal
-            ? `<a href="#" class="reveal-link" data-id="${$esc(
-                id
-              )}" data-state="closed">Reveal original</a>`
-            : ""
-        }
+        ${needsReveal
+          ? `<a href="#" class="reveal-link" data-id="${$esc(id)}" data-state="closed">Reveal original</a>`
+          : ""}
       </div>
     `;
   }
@@ -221,19 +228,35 @@ import { censorText } from "./censor.js";
   /* ---------------- History link handlers ---------------- */
   olderLink?.addEventListener("click", (e) => {
     e.preventDefault();
-    if (!olderLink.classList.contains("hidden")) {
-      load({ append: true });
-    }
+    if (isLoading || olderLink.classList.contains("hidden")) return;
+    load({ append: true });
   });
 
   newerLink?.addEventListener("click", (e) => {
     e.preventDefault();
+    if (isLoading) return;
     // reset to newest page
     cursor = null;
     hasHistory = false;
     load({ append: false });
   });
 
+  /* ---------------- Refresh handler ---------------- */
+  refreshLink?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (isLoading) return;
+    refreshLink.classList.add("is-loading");
+    const oldText = refreshLink.textContent;
+    refreshLink.textContent = "Refreshing…";
+    cursor = null;
+    hasHistory = false;
+    load({ append: false }).finally(() => {
+      refreshLink.classList.remove("is-loading");
+      refreshLink.textContent = oldText || "⟳ Refresh";
+    });
+  });
+
   // initial load
   load();
 })();
+```
