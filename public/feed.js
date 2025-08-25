@@ -5,6 +5,9 @@ import { censorText } from "./censor.js";
   const feedEl = document.getElementById("feed");
   if (!feedEl) return;
 
+  /* ---------------- Config for paging ---------------- */
+  const FETCH_LIMIT = 50; // how many per page
+
   /* ---------------- Utils ---------------- */
   const $esc = (s) =>
     String(s)
@@ -47,23 +50,86 @@ import { censorText } from "./censor.js";
     return "";
   };
 
-  /* ---------------- Load feed ---------------- */
-  async function load() {
+  /* ---------------- Inject “Older/Newer” text links (no HTML edits needed) ---------------- */
+  const nav = document.getElementById("feed-nav") || (() => {
+    const d = document.createElement("div");
+    d.id = "feed-nav";
+    d.className = "feed-nav";
+    d.innerHTML = `
+      <a href="#" id="newer-link" class="feed-link hidden">← Newer</a>
+      <a href="#" id="older-link" class="feed-link">Older →</a>
+    `;
+    feedEl.insertAdjacentElement("afterend", d);
+    return d;
+  })();
+  const olderLink = nav.querySelector("#older-link");
+  const newerLink = nav.querySelector("#newer-link");
+
+  // lightweight styles if you haven't added CSS; safe to omit
+  if (!document.getElementById("feed-nav-inline-style")) {
+    const style = document.createElement("style");
+    style.id = "feed-nav-inline-style";
+    style.textContent = `
+      .feed-link{display:inline-block;margin:.5rem .75rem;font-size:.9rem;color:var(--accent);text-decoration:none;opacity:.9;cursor:pointer}
+      .feed-link:hover{text-decoration:underline;opacity:1}
+      .feed-link.hidden{display:none}
+    `;
+    document.head.appendChild(style);
+  }
+
+  /* ---------------- Paging state ---------------- */
+  let cursor = null;     // created_at of last visible item (for /complaints?before=…)
+  let hasHistory = false; // whether we've paged older at least once
+
+  /* ---------------- Load feed (supports append + cursor) ---------------- */
+  async function load({ append = false } = {}) {
     try {
-      const res = await fetch("/complaints?limit=120", { cache: "no-store" });
+      const url = new URL("/complaints", location.origin);
+      url.searchParams.set("limit", String(FETCH_LIMIT));
+      if (append && cursor) url.searchParams.set("before", cursor);
+
+      const res = await fetch(url.toString(), { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      const list = normalizeList(json);
+      const list = normalizeList(await res.json());
 
       if (!list.length) {
-        feedEl.innerHTML = `<div class="muted s">No complaints yet.</div>`;
+        if (!append) {
+          feedEl.innerHTML = `<div class="muted s">No complaints yet.</div>`;
+        }
+        // if no more, hide Older
+        olderLink?.classList.add("hidden");
         return;
       }
 
-      feedEl.innerHTML = list.map(renderItem).join("");
+      const html = list.map(renderItem).join("");
+
+      if (append) {
+        feedEl.insertAdjacentHTML("beforeend", html);
+        hasHistory = true;
+      } else {
+        feedEl.innerHTML = html;
+        hasHistory = false;
+      }
+
+      // move cursor to the last item we just drew
+      const last = list[list.length - 1];
+      cursor =
+        last?.created_at ??
+        last?.createdAt ??
+        last?.time ??
+        last?.timestamp ??
+        null;
+
+      // toggle links
+      // show Older if we likely have more (equal page size)
+      if (olderLink) olderLink.classList.toggle("hidden", list.length < FETCH_LIMIT);
+      // show Newer only if we’ve gone into history
+      if (newerLink) newerLink.classList.toggle("hidden", !hasHistory);
     } catch (e) {
       console.error("feed load error:", e);
-      feedEl.innerHTML = `<div class="muted s">Could not load complaints.</div>`;
+      if (!append) {
+        feedEl.innerHTML = `<div class="muted s">Could not load complaints.</div>`;
+      }
     }
   }
 
@@ -127,12 +193,11 @@ import { censorText } from "./censor.js";
           fullRaw = extractFullText(payload);
         } catch {}
 
+        // fallback to embedded original if API didn't provide it
         if (!fullRaw) {
           const b64 = itemEl.getAttribute("data-raw-b64") || "";
           if (b64) {
-            try {
-              fullRaw = fromB64(b64);
-            } catch {}
+            try { fullRaw = fromB64(b64); } catch {}
           }
         }
 
@@ -153,5 +218,22 @@ import { censorText } from "./censor.js";
     }
   });
 
+  /* ---------------- History link handlers ---------------- */
+  olderLink?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (!olderLink.classList.contains("hidden")) {
+      load({ append: true });
+    }
+  });
+
+  newerLink?.addEventListener("click", (e) => {
+    e.preventDefault();
+    // reset to newest page
+    cursor = null;
+    hasHistory = false;
+    load({ append: false });
+  });
+
+  // initial load
   load();
 })();

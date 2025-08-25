@@ -296,3 +296,15 @@ textarea{ min-height:10rem }
 /* Inline toggle helpers */
 .inline { display: inline; }
 .hidden { display: none !important; }
+
+.feed-link {
+  display: inline-block;
+  margin: .5rem .75rem;
+  font-size: .9rem;
+  color: var(--accent);
+  text-decoration: none;
+  opacity: .9;
+  cursor: pointer;
+}
+.feed-link:hover { text-decoration: underline; opacity: 1; }
+.feed-link.hidden { display: none; }
