@@ -305,7 +305,7 @@ textarea{ min-height:10rem }
 /* Reveal link */
 .reveal-link{
   display: inline-block;
-  margin-top: .25rem;
+  margin-top: .23rem;
   font-size: .9rem;
   color: var(--accent);
   text-decoration: none;
@@ -315,7 +315,7 @@ textarea{ min-height:10rem }
 .reveal-link.is-loading{ pointer-events: none; opacity: .6; }
 
 /* Extra compact when there is NO reveal link (short posts) */
-.item:not(:has(.reveal-link)){ padding-bottom: .3rem; }
+.item:not(:has(.reveal-link)){ padding-bottom: .1rem; }
 .item:not(:has(.reveal-link)) .msg{ margin: .1rem 0; }
 
 /* Helpers your JS already uses */
