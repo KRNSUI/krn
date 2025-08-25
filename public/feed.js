@@ -1,6 +1,3 @@
-Here you go—kept your structure, only added the refresh wiring + a simple loading guard, and gave the refresh link the same `.feed-link` class so it inherits your styles.
-
-```js
 // public/feed.js
 import { censorText } from "./censor.js";
 
@@ -53,7 +50,7 @@ import { censorText } from "./censor.js";
     return "";
   };
 
-  /* ---------------- Inject “Refresh / Older / Newer” links ---------------- */
+  /* ---------------- Inject “Older/Newer” text links (no HTML edits needed) ---------------- */
   const nav = document.getElementById("feed-nav") || (() => {
     const d = document.createElement("div");
     d.id = "feed-nav";
@@ -84,14 +81,12 @@ import { censorText } from "./censor.js";
   }
 
   /* ---------------- Paging state ---------------- */
-  let cursor = null;      // created_at of last visible item (for /complaints?before=…)
+  let cursor = null;     // created_at of last visible item (for /complaints?before=…)
   let hasHistory = false; // whether we've paged older at least once
-  let isLoading = false;  // simple guard to avoid double fetches
+  let isLoading = false;
 
   /* ---------------- Load feed (supports append + cursor) ---------------- */
   async function load({ append = false } = {}) {
-    if (isLoading) return;
-    isLoading = true;
     try {
       const url = new URL("/complaints", location.origin);
       url.searchParams.set("limit", String(FETCH_LIMIT));
@@ -139,8 +134,6 @@ import { censorText } from "./censor.js";
       if (!append) {
         feedEl.innerHTML = `<div class="muted s">Could not load complaints.</div>`;
       }
-    } finally {
-      isLoading = false;
     }
   }
 
@@ -164,9 +157,13 @@ import { censorText } from "./censor.js";
           <span data-variant="short" class="inline">${$esc(preview)}</span>
           <span data-variant="full" class="inline hidden"></span>
         </pre>
-        ${needsReveal
-          ? `<a href="#" class="reveal-link" data-id="${$esc(id)}" data-state="closed">Reveal original</a>`
-          : ""}
+        ${
+          needsReveal
+            ? `<a href="#" class="reveal-link" data-id="${$esc(
+                id
+              )}" data-state="closed">Reveal original</a>`
+            : ""
+        }
       </div>
     `;
   }
@@ -259,4 +256,3 @@ import { censorText } from "./censor.js";
   // initial load
   load();
 })();
-```
