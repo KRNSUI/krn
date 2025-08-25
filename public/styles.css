@@ -340,3 +340,4 @@ textarea{ min-height:10rem }
 .badge.x { background: #000; }
 .badge.buy { background: var(--acc1, #ff6a00); }
 .badge.scan { background: #1a73e8; }
+.badge.telegram { background: #0088cc; }
