@@ -255,31 +255,26 @@ textarea{ min-height:10rem }
 .holders .addr { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 70%; }
 .holders .amt { font-weight:600; }
 
-/* === Desktop/Laptop (keep 2 columns, equal height) === */
-@media (min-width: 900px){
-  /* Ensure the grid tracks stretch and children can fill them */
-  .krn-layout{
-    grid-template-columns: 1fr 1fr;      /* stay two columns */
-    grid-auto-rows: 1fr;                 /* first row fills, chart row sizes itself */
-    align-items: stretch;
+/* ===== Desktop equal-height fix (non-destructive) ===== */
+@media (min-width: 900px) {
+  .krn-layout {
+    align-items: stretch;           
+    grid-auto-rows: minmax(0, auto);
   }
 
-  /* Let columns behave as flex so their main child can stretch */
   .form-col,
-  .feed-col { display:flex; min-height:0; }
-
-  /* Kill the old min-height:70vh on desktop and stretch to match the feed */
-  .form-col .card{
-    min-height: 0 !important;
-    height: auto;
-    flex: 1 1 auto;
+  .feed-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;             
   }
 
-  /* Let the feed fill the same track; remove desktop max-height cap */
-  .feed{
-    max-height: none !important;
-    height: auto;
+  .form-col .card,
+  .feed-col .feed {
     flex: 1 1 auto;
+    min-height: auto;           
+    max-height: 70vh;         
+    overflow: auto;               
   }
 }
 

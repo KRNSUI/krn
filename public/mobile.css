@@ -1,20 +1,21 @@
-/* === Mobile / Small tablet === */
-@media (max-width: 900px){
-  /* One column on small screens */
-  .krn-layout{ grid-template-columns: 1fr; }
+/* ===== Mobile polish ===== */
+@media (max-width: 699px) {
+  /* Keep stacked layout */
+  .krn-layout {
+    grid-template-columns: 1fr;
+  }
 
-  /* Make the feed visually smaller on mobile */
-  .feed{
-    max-height: 38vh;        /* tweak to taste */
+  /* Smaller feed container on mobile */
+  .feed {
+    max-height: 48vh;
     overflow: auto;
   }
 
-  /* Submit button: full width and centered inside the form */
-  .form-col .card button,
-  .form-col .card .btn{
+  /* Full-width, centered submit button on mobile */
+  .form-col .card button[type="submit"],
+  .form-col .card .btn {
     width: 100%;
-    max-width: 560px;        /* optional guard; remove if you want 100% always */
-    display: block;
-    margin: .75rem auto 0;   /* center horizontally */
+    display: inline-block;
+    text-align: center;
   }
 }
