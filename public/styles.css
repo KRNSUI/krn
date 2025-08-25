@@ -313,21 +313,21 @@ textarea{ min-height:10rem }
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.4rem; /* smaller spacing */
+  gap: 0.4rem;          /* compact spacing */
   margin: 0.5rem 0;
 }
 
 .badge {
   display: inline-block;
-  padding: 0.2rem 0.45rem;   /* cut padding in half */
+  padding: 0.2rem 0.45rem;   /* smaller pill size */
   border-radius: 999px;
   font-weight: 600;
   font-size: 0.7rem;         /* smaller text */
   color: #fff;
   text-decoration: none;
-  transition: background 0.2s, box-shadow 0.2s;
   background: var(--acc1, #ff6a00);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.25); /* tighter shadow */
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
 
 .badge:hover {
