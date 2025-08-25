@@ -279,19 +279,21 @@ textarea{ min-height:10rem }
   word-break: break-word;
 }
 
-/* 2-line preview for the SHORT variant only */
+/* Full text should wrap normally when revealed */
+.item .msg [data-variant="full"]{
+  display: inline;
+  white-space: pre-wrap;
+}
+
+/* Two‑line clamp applies only to preview */
 .item .msg [data-variant="short"]{
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;               /* <-- show two lines */
+  -webkit-line-clamp: 2;
   overflow: hidden;
-
-  /* make <pre> behave like a paragraph for preview */
   white-space: normal;
   line-height: 1.4;
   max-height: calc(2 * 1.4em);
-
-  /* subtle bottom fade so truncation looks intentional */
   -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 70%, rgba(0,0,0,0));
           mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 70%, rgba(0,0,0,0));
 }

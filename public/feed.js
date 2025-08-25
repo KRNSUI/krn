@@ -97,61 +97,68 @@ import { censorText } from "./censor.js";
       </div>
     `;
   }
+  
+// ---------- CLICK: reveal / hide ----------
+feedEl.addEventListener("click", async (ev) => {
+  const link = ev.target.closest(".reveal-link");
+  if (!link) return;
+  ev.preventDefault();
 
-  /* ---------------- Reveal / hide original ---------------- */
-  feedEl.addEventListener("click", async (ev) => {
-    const link = ev.target.closest(".reveal-link");
-    if (!link) return;
-    ev.preventDefault();
+  const id = link.getAttribute("data-id") || "";
+  const itemEl = link.closest(".item");
+  if (!itemEl) return;
 
-    const id = link.getAttribute("data-id") || "";
-    const state = link.getAttribute("data-state") || "closed";
-    const itemEl = link.closest(".item");
-    if (!itemEl) return;
+  const shortSpan = itemEl.querySelector('span[data-variant="short"]');
+  const fullSpan  = itemEl.querySelector('span[data-variant="full"]');
 
-    const shortSpan = itemEl.querySelector('span[data-variant="short"]');
-    const fullSpan = itemEl.querySelector('span[data-variant="full"]');
+  const open = link.getAttribute("data-state") === "open";
 
-    if (state === "closed") {
-      try {
-        link.textContent = "Loading…";
-        link.classList.add("is-loading");
+  // HIDE
+  if (open) {
+    if (fullSpan) fullSpan.style.display = "none";
+    if (shortSpan) shortSpan.style.display = "inline";
+    link.setAttribute("data-state", "closed");
+    link.textContent = "Reveal original";
+    return;
+  }
 
-        let fullRaw = "";
-        try {
-          const r = await fetch(
-            `/complaints?id=${encodeURIComponent(id)}&reveal=1`,
-            { cache: "no-store" }
-          );
-          const payload = await r.json().catch(() => ({}));
-          fullRaw = extractFullText(payload);
-        } catch {}
+  // SHOW
+  try {
+    link.textContent = "Loading…";
+    link.classList.add("is-loading");
 
-        if (!fullRaw) {
-          const b64 = itemEl.getAttribute("data-raw-b64") || "";
-          if (b64) {
-            try {
-              fullRaw = fromB64(b64);
-            } catch {}
-          }
-        }
+    // fetch only once
+    if (!fullSpan.getAttribute("data-loaded")) {
+      const r = await fetch(`/complaints?id=${encodeURIComponent(id)}&reveal=1`, { cache: "no-store" });
+      const payload = await r.json();
 
-        fullSpan.textContent = fullRaw || "(no content)";
-        fullSpan.classList.remove("hidden");
-        shortSpan.classList.add("hidden");
+      // robustly extract text shape
+      const fullRaw =
+        (payload?.complaint?.text) ??
+        (payload?.complaint?.message) ??
+        (payload?.text) ??
+        (payload?.message) ??
+        (payload?.data?.text) ??
+        (payload?.data?.message) ??
+        (typeof payload?.complaint === "string" ? payload.complaint : "");
 
-        link.textContent = "Hide original";
-        link.setAttribute("data-state", "open");
-      } finally {
-        link.classList.remove("is-loading");
-      }
-    } else {
-      fullSpan.classList.add("hidden");
-      shortSpan.classList.remove("hidden");
-      link.textContent = "Reveal original";
-      link.setAttribute("data-state", "closed");
+      fullSpan.textContent = fullRaw || "(no content)";
+      fullSpan.setAttribute("data-loaded", "1");
     }
-  });
+
+    // swap views
+    if (shortSpan) shortSpan.style.display = "none";
+    fullSpan.style.display = "inline";
+    link.setAttribute("data-state", "open");
+    link.textContent = "Hide original";
+  } catch (err) {
+    console.error("reveal error:", err);
+    link.textContent = "Reveal original";
+    alert("Failed to reveal.");
+  } finally {
+    link.classList.remove("is-loading");
+  }
+});
 
   load();
 })();
