@@ -12,19 +12,48 @@
         return;
       }
 
-      // --- coin basics ---
-      const name = data.coin?.name ?? "KRN";
-      const symbol = data.coin?.symbol ?? "KRN";
-      const decimals = data.coin?.decimals ?? 9;
-      const total = data.coin?.totalSupply ?? null;
+      
+// --- coin basics ---
+const name     = data.coin?.name    ?? "KRN";
+const symbol   = data.coin?.symbol  ?? "KRN";
+const decimals = data.coin?.decimals ?? 9;
 
-      // fill text nodes
-      const elName = $("#coinName");
-      const elSymbol = $("#coinSymbol");
-      const elSupply = $("#coinSupply");
-      if (elName) elName.textContent = name;
-      if (elSymbol) elSymbol.textContent = symbol;
-      if (elSupply) elSupply.textContent = formatNumber(total, decimals);
+// Try several common field names and normalize if it's in base units
+const totalRaw =
+  data.coin?.totalSupply ??
+  data.coin?.total ??
+  data.coin?.supply ??
+  data.coin?.circulatingSupply ??
+  data.coin?.metadata?.total ??
+  data.coin?.metadata?.totalSupply ??
+  null;
+
+const total = normalizeTotal(totalRaw, decimals);
+
+// fill text nodes
+const elName   = document.querySelector("#coinName");
+const elSymbol = document.querySelector("#coinSymbol");
+const elSupply = document.querySelector("#coinSupply");
+if (elName)   elName.textContent   = name;
+if (elSymbol) elSymbol.textContent = symbol;
+if (elSupply) elSupply.textContent = total == null ? "—" : formatNumber(total);
+
+function normalizeTotal(val, decimals) {
+  if (val == null) return null;
+
+  // Convert to number if it came as a string/bigint-ish string
+  let n = typeof val === "string" ? Number(val) : val;
+  if (!Number.isFinite(n)) return null;
+
+  // Some providers return base units (10^decimals). If it looks way too large,
+  // scale it down once using decimals.
+  const scaled = n / Math.pow(10, decimals || 0);
+  // Heuristic: if scaling yields a sensible value (>= 1) while the unscaled is huge,
+  // prefer the scaled value; otherwise keep original.
+  if (n > 1e12 && scaled >= 1) return scaled;
+
+  return n;
+}
 
       // --- holders list ---
       const holders = Array.isArray(data.topHolders) ? data.topHolders : [];
