@@ -2,52 +2,6 @@
 import { censorText } from "./censor.js";
 import { connectWallet, getAddress, payOneKRN } from "./slush.js";
 import { fetchStars, postStarToggle } from "./stars.js";
-import { ensureWallet, isConnected, connect } from "./slush.js";
-
-// runtime payment switch (already in your code)
-const REQUIRE_PAYMENT = window.KRN_STARS_REQUIRE_PAYMENT === true;
-
-/* --- Soft banner prompt (shows once per session) --- */
-function injectWalletBanner() {
-  if (!REQUIRE_PAYMENT) return;                   // only when payment is on
-  if (sessionStorage.getItem("krn_slush_banner_dismissed")) return;
-
-  const bar = document.createElement("div");
-  bar.className = "slush-banner";
-  bar.innerHTML = `
-    <span>Connect Slush to star posts (1 KRN each).</span>
-    <a href="#" data-slush-connect>Connect</a>
-    <a href="#" data-slush-dismiss class="muted">No thanks</a>
-  `;
-  // place above the feed; adjust target if you prefer
-  const feedCol = document.querySelector(".feed-col") || document.body;
-  feedCol.prepend(bar);
-
-  bar.addEventListener("click", async (e) => {
-    const a = e.target.closest("a");
-    if (!a) return;
-    e.preventDefault();
-
-    if (a.matches("[data-slush-connect]")) {
-      try {
-        await connect();
-        bar.remove();
-        sessionStorage.setItem("krn_slush_banner_dismissed", "1");
-        alert("Wallet connected.");
-      } catch (err) {
-        alert(err?.message || "Could not connect wallet.");
-      }
-    }
-    if (a.matches("[data-slush-dismiss]")) {
-      bar.remove();
-      sessionStorage.setItem("krn_slush_banner_dismissed", "1");
-    }
-  });
-}
-
-/* call once on load */
-document.addEventListener("DOMContentLoaded", injectWalletBanner);
-
 
 (() => {
   const feedEl = document.getElementById("feed");
@@ -306,35 +260,34 @@ async function refreshStarsInView() {
 
 
   /* ---------------- Stars: toggle handler ---------------- */
-document.addEventListener("click", async (ev) => {
+  feedEl.addEventListener('click', async (ev) => {
   const btn = ev.target.closest('[data-star-btn]');
   if (!btn) return;
 
   ev.preventDefault();
-  const row = btn.closest(".item");
-  if (!row) return;
+
+  const itemEl = btn.closest('.item');
+  const postId = itemEl?.getAttribute('data-id');
+  if (!postId) return;
+
+  const dir = btn.getAttribute('data-dir') || 'up'; // keep your current API
+  const countEl = itemEl.querySelector('[data-star-count]');
+
+  btn.setAttribute('aria-busy', 'true');
+  btn.disabled = true;
 
   try {
-    // If payment is ON and no wallet yet, ask now.
-    // If user says "No", this throws and we abort (hard require).
-    // If payment is OFF (staging), ensureWallet returns null and we continue without wallet.
-    const addr = await ensureWallet(REQUIRE_PAYMENT, "Star this post with 1 KRN?");
-
-    const isOn = btn.getAttribute("aria-pressed") === "true";
-    const next = !isOn;
-
-    applyStarUI(row, next);                           // optimistic UI
-    await postStarToggle({ postId: row.getAttribute("data-id"), turnOn: next, addr });
-    // Optionally: await refreshStarsInView();
-  } catch (e) {
-    // user declined or server failed → revert optimistic UI
-    const wasOn = btn.getAttribute("aria-pressed") === "true";
-    applyStarUI(row, !wasOn);
-    if (String(e?.message || "").includes("declined")) {
-      alert("Star canceled — wallet not connected.");
-    } else {
-      alert(e?.message || "Could not process star. Please try again.");
+    // IMPORTANT: await + try/catch (no .catch chaining)
+    const res = await postStarToggle(postId, dir); // { ok, count } in no-pay mode
+    if (res && typeof res.count === 'number' && countEl) {
+      countEl.textContent = String(res.count);
     }
+  } catch (err) {
+    console.error('star toggle error:', err);
+    alert('Could not process star. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
   }
 });
 
@@ -371,63 +324,3 @@ document.addEventListener("click", async (ev) => {
   // initial load
   load();
 })();
-
-// Optimistic toggle helper
-function applyStarUI(row, turnOn) {
-  const countEl = row.querySelector('[data-star-count]');
-  const btn     = row.querySelector('[data-star-btn]');
-  if (!countEl || !btn) return;
-
-  const current = parseInt(countEl.textContent || "0", 10) || 0;
-  const next = Math.max(0, current + (turnOn ? 1 : -1));
-  countEl.textContent = String(next);
-  btn.setAttribute("aria-pressed", turnOn ? "true" : "false");
-  btn.classList.toggle("is-on", turnOn);
-}
-
-async function postStarToggle({ postId, turnOn, addr }) {
-  // If you have a no-payment toggle in your Functions, pass payment=false to skip transfer
-  const body = { post_id: postId, on: !!turnOn, addr, payment: REQUIRE_PAYMENT };
-  const r = await fetch("/stars/toggle", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!r.ok) {
-    const t = await r.text().catch(() => "");
-    throw new Error(t || "Toggle failed");
-  }
-  return r.json().catch(() => ({}));
-}
-
-// Delegated click for stars
-document.addEventListener("click", async (ev) => {
-  const btn = ev.target.closest('[data-star-btn]');
-  if (!btn) return;
-
-  ev.preventDefault();
-  const row = btn.closest(".item");
-  if (!row) return;
-
-  try {
-    // Require wallet only when payment is active
-    const addr = await ensureWallet(REQUIRE_PAYMENT);
-    const isOn = btn.getAttribute("aria-pressed") === "true";
-    const next = !isOn;
-
-    // optimistic UI
-    applyStarUI(row, next);
-
-    // server
-    await postStarToggle({ postId: row.getAttribute("data-id"), turnOn: next, addr });
-
-    // Optionally re-sync from server (in case of drift)
-    // await refreshStarsInView();
-  } catch (e) {
-    // revert optimistic
-    const wasOn = btn.getAttribute("aria-pressed") === "true";
-    applyStarUI(row, !wasOn); // undo attempt
-    alert(e?.message || "Could not process star. Please try again.");
-  }
-});
-
