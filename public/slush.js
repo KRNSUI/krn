@@ -1,63 +1,62 @@
 // /public/slush.js
 
-// Toggle: if true, skip wallet & payments (demo / staging)
-export const FREE_MODE = Boolean(window.__STAR_FREE_MODE__);
+// Safe global reference for browser (window) or Workers (globalThis)
+const g = (typeof window !== "undefined" ? window : globalThis);
+
+// Read free-mode flag safely (works in Workers and browser)
+export const FREE_MODE = Boolean(
+  (g && g.__STAR_FREE_MODE__) || (g && g.__FREE_MODE__)
+);
 
 /**
- * Connect Slush wallet (stub). Returns a “connected” flag.
- * Replace with real window.slush integration when you’re ready.
+ * Connect Slush wallet (stub).
+ * Always guard browser-only APIs with `typeof window !== "undefined"`.
  */
 export async function connectWallet() {
   if (FREE_MODE) return { connected: true, address: null };
 
-  if (!window.slush) {
-    throw new Error("Slush wallet not found (window.slush is undefined).");
+  if (typeof window === "undefined" || !g.slush) {
+    // In Workers or wallet not present
+    throw new Error("Slush wallet not found.");
   }
-  // Example real flow (uncomment when Slush is ready):
-  // await window.slush.connect();
-  // return { connected: true, address: window.slush.account?.address || null };
 
-  // Temporary no-op until Slush is integrated
+  // Example (when Slush is available):
+  // await g.slush.connect();
+  // return { connected: true, address: g.slush.account?.address || null };
+
   return { connected: true, address: null };
 }
 
-/**
- * Get the currently connected address (stub).
- */
+/** Get current address (stub) */
 export function getAddress() {
   if (FREE_MODE) return null;
-  // return window.slush?.account?.address || null; // when Slush is ready
+  if (typeof window === "undefined") return null;
+  // return g.slush?.account?.address || null; // when ready
   return null;
 }
 
 /**
- * Pay 1 KRN (stub). Keep signature the same so caller code doesn’t change.
- * @param {Object} opts
- * @param {string} [opts.to] - destination address/object if needed
- * @param {number} [opts.amount=1] - amount of KRN
+ * Pay 1 KRN (stub).
+ * Keep signature; guard browser API.
  */
 export async function payOneKRN({ to = "", amount = 1 } = {}) {
   if (FREE_MODE) return { ok: true, txId: null, mode: "free" };
 
-  if (!window.slush) {
+  if (typeof window === "undefined" || !g.slush) {
     throw new Error("Slush wallet not available for payment.");
   }
-  // Example real flow (uncomment & adapt once Slush is ready):
-  // const res = await window.slush.pay({
+
+  // Example real flow:
+  // const res = await g.slush.pay({
   //   type: "coin::transfer",
-  //   coinType: "0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN",
+  //   coinType:
+  //     "0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN",
   //   to,
   //   amount
   // });
   // return { ok: true, txId: res?.digest || null, mode: "paid" };
 
-  // Temporary no-op
   return { ok: true, txId: null, mode: "noop" };
 }
 
-export default {
-  FREE_MODE,
-  connectWallet,
-  getAddress,
-  payOneKRN,
-};
+export default { FREE_MODE, connectWallet, getAddress, payOneKRN };
