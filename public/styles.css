@@ -410,3 +410,20 @@ textarea{ min-height:10rem }
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
+
+.stars [data-star-btn] {
+  text-decoration: none;
+  margin-right: .35rem;
+  user-select: none;
+}
+.stars [data-star-btn].is-on { color: var(--acc2); font-weight: 700; }
+
+.slush-banner{
+  display:flex; gap:.75rem; align-items:center;
+  background:var(--card); border:1px solid var(--edge);
+  border-radius:12px; padding:.6rem .8rem; margin-bottom:.6rem;
+  box-shadow: var(--shadow);
+}
+.slush-banner a{ color:var(--accent); text-decoration:none; font-weight:600 }
+.slush-banner a.muted{ opacity:.8 }
+.slush-banner a:hover{ text-decoration:underline }

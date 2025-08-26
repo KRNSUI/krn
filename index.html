@@ -78,6 +78,16 @@
   <a class="badge scan" href="https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs" target="_blank" rel="noopener">SuiScan</a>
   <a class="badge telegram" href="https://t.me/+_o-Osjl6_-g1ZTEx" target="_blank" rel="noopener">Telegram</a>
 </div>
+<a href="#" id="connectSlush" class="muted s">Connect Slush</a>
+<script type="module">
+  import { connect } from "/public/slush.js";
+  document.querySelector("#connectSlush")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    try { await connect(); alert("Wallet connected"); } 
+    catch (err) { alert(err.message || "Could not connect wallet"); }
+  });
+</script>
+
 
 
       </form>
