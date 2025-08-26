@@ -27,6 +27,47 @@ export async function connectWallet() {
   return { connected: true, address: null };
 }
 
+/**
+ * Ensure wallet is connected, prompting user if needed.
+ * This function is called by the stars system to verify wallet connection.
+ */
+export async function ensureConnected() {
+  if (FREE_MODE) return true;
+
+  try {
+    // Check if already connected
+    const address = getAddress();
+    if (address) return true;
+
+    // Try to connect
+    const result = await connectWallet();
+    if (result.connected) return true;
+
+    // If connection failed, prompt user
+    const shouldConnect = confirm("Connect your Slush wallet to star posts?");
+    if (shouldConnect) {
+      const retryResult = await connectWallet();
+      return retryResult.connected;
+    }
+    
+    return false;
+  } catch (error) {
+    console.warn("Wallet connection failed:", error);
+    
+    // Prompt user to continue in demo mode
+    const goDemo = confirm("Wallet connection failed. Continue in demo mode (no payment)?");
+    if (goDemo) {
+      // Set demo mode flag
+      if (typeof window !== "undefined") {
+        localStorage.setItem("krn_no_pay", "1");
+      }
+      return true; // Allow demo mode
+    }
+    
+    return false;
+  }
+}
+
 /** Get current address (stub) */
 export function getAddress() {
   if (FREE_MODE) return null;
@@ -36,10 +77,10 @@ export function getAddress() {
 }
 
 /**
- * Pay 1 KRN (stub).
+ * Pay KRN tokens (stub).
  * Keep signature; guard browser API.
  */
-export async function payOneKRN({ to = "", amount = 1 } = {}) {
+export async function payKRN({ to = "", amount = 1 } = {}) {
   if (FREE_MODE) return { ok: true, txId: null, mode: "free" };
 
   if (typeof window === "undefined" || !g.slush) {
@@ -51,7 +92,6 @@ export async function payOneKRN({ to = "", amount = 1 } = {}) {
   //   type: "coin::transfer",
   //   coinType:
   //     "0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN",
-  //   to,
   //   amount
   // });
   // return { ok: true, txId: res?.digest || null, mode: "paid" };
@@ -59,4 +99,7 @@ export async function payOneKRN({ to = "", amount = 1 } = {}) {
   return { ok: true, txId: null, mode: "noop" };
 }
 
-export default { FREE_MODE, connectWallet, getAddress, payOneKRN };
+// Keep backward compatibility
+export const payOneKRN = payKRN;
+
+export default { FREE_MODE, connectWallet, ensureConnected, getAddress, payOneKRN };
