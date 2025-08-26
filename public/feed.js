@@ -2,6 +2,8 @@
 import { censorText } from "./censor.js";
 import { connectWallet, getAddress, payOneKRN } from "./slush.js";
 import { fetchStars, postStarToggle } from "./stars.js";
+import { hydrateStarCounts, initStars } from "./stars.js";
+
 
 (() => {
   const feedEl = document.getElementById("feed");
@@ -118,11 +120,21 @@ import { fetchStars, postStarToggle } from "./stars.js";
         hasHistory = true;
       } else {
         feedEl.innerHTML = html;
+          await hydrateStarCounts(feedEl);
+          initStars(feedEl);
         hasHistory = false;
       }
 
       // update stars for everything currently in DOM
       await refreshStarsInView();
+      
+      // Also check which posts the current user has starred
+      try {
+        const { hydrateUserStarStates } = await import("./stars.js");
+        await hydrateUserStarStates(feedEl);
+      } catch (error) {
+        console.warn("Could not hydrate user star states:", error);
+      }
 
       // move cursor to the last item we just drew
       const last = list[list.length - 1];
@@ -171,10 +183,17 @@ function renderItem(it) {
           : ""
       }
 
-      <!-- Stars UI (single instance inside the item) -->
+      <!-- Stars UI with proper star toggle button -->
       <div class="stars">
-        <a href="#" data-star-btn data-dir="up" class="muted s" title="Star this post">★</a>
-        <span data-star-count>0</span>
+        <button type="button" 
+                class="star-toggle" 
+                data-id="${$esc(id)}" 
+                data-dir="up" 
+                aria-pressed="false"
+                title="Star this post (costs 2 KRN)">
+          ★
+        </button>
+        <span class="star-count" data-id="${$esc(id)}">0</span>
       </div>
     </div>
   `;
