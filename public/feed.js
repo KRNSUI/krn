@@ -146,37 +146,39 @@ import { fetchStars, postStarToggle } from "./stars.js";
     }
   }
 
-  /* ---------------- Render each item ---------------- */
-  function renderItem(it) {
-    const id = String(it.id ?? it.ID ?? it.rowid ?? "");
-    const when = (pickTime(it) || new Date()).toLocaleString();
+/* ---------------- Render each item ---------------- */
+function renderItem(it) {
+  const id   = String(it.id ?? it.ID ?? it.rowid ?? "");
+  const when = (pickTime(it) || new Date()).toLocaleString();
 
-    const raw = pickText(it);
-    const rawB64 = toB64(raw);
+  const raw    = pickText(it);
+  const rawB64 = toB64(raw);
 
-    const { text: censored } = censorText(raw);
-    const preview = twoLinePreview(censored);
-    const needsReveal = censored !== raw || raw.split(/\r?\n/).length > 2;
+  const { text: censored } = censorText(raw);
+  const preview     = twoLinePreview(censored);
+  const needsReveal = (censored !== raw) || (raw.split(/\r?\n/).length > 2);
 
-    return `
-      <div class="item" data-id="${$esc(id)}" data-raw-b64="${$esc(rawB64)}">
-        <div class="time">${$esc(when)}</div>
-        <pre class="msg">
-          <span data-variant="short" class="inline">${$esc(preview)}</span>
-          <span data-variant="full" class="inline hidden"></span>
-        </pre>
-        ${
-          needsReveal
-            ? `<a href="#" class="reveal-link" data-id="${$esc(id)}" data-state="closed">Reveal original</a>`
-            : ""
-        }
-        <div class="stars" data-stars-for="${$esc(id)}">
-          <a href="#" class="star-toggle" data-id="${$esc(id)}" aria-pressed="false" title="Star (costs 1 KRN)">★</a>
-          <span class="star-count" data-id="${$esc(id)}">0</span>
-        </div>
+  return `
+    <div class="item" data-id="${$esc(id)}" data-raw-b64="${$esc(rawB64)}">
+      <div class="time">${$esc(when)}</div>
+      <pre class="msg">
+        <span data-variant="short" class="inline">${$esc(preview)}</span>
+        <span data-variant="full" class="inline hidden"></span>
+      </pre>
+      ${
+        needsReveal
+          ? `<a href="#" class="reveal-link" data-id="${$esc(id)}" data-state="closed">Reveal original</a>`
+          : ""
+      }
+
+      <!-- Stars UI (single instance inside the item) -->
+      <div class="stars">
+        <a href="#" data-star-btn data-dir="up" class="muted s" title="Star this post">★</a>
+        <span data-star-count>0</span>
       </div>
-    `;
-  }
+    </div>
+  `;
+}
 
   /* ---------------- Reveal / hide original (event delegation) ---------------- */
   feedEl.addEventListener("click", async (ev) => {
@@ -229,66 +231,65 @@ import { fetchStars, postStarToggle } from "./stars.js";
   });
 
   /* ---------------- Stars: load counts for visible items ---------------- */
-  async function refreshStarsInView() {
-    try {
-      const ids = Array.from(feedEl.querySelectorAll(".item[data-id]")).map(n =>
-        n.getAttribute("data-id")
-      ).filter(Boolean);
-      if (!ids.length) return;
+async function refreshStarsInView() {
+  try {
+    // gather IDs currently rendered
+    const ids = Array.from(document.querySelectorAll('#feed .item'))
+      .map(el => el.getAttribute('data-id'))
+      .filter(Boolean);
 
-      const addr = await getAddress().catch(() => null);
-      const map = await fetchStars(ids, addr); // expect { [id]: { count, starred } }
+    if (!ids.length) return;
 
-      for (const id of ids) {
-        const row = feedEl.querySelector(`.stars[data-stars-for="${CSS.escape(id)}"]`);
-        if (!row) continue;
-        const countEl = row.querySelector(`.star-count[data-id="${CSS.escape(id)}"]`);
-        const toggleEl = row.querySelector(`.star-toggle[data-id="${CSS.escape(id)}"]`);
-        const info = map?.[id] || { count: 0, starred: false };
-        if (countEl) countEl.textContent = String(info.count ?? 0);
-        if (toggleEl) toggleEl.setAttribute("aria-pressed", info.starred ? "true" : "false");
+    // IMPORTANT: await + try/catch (no .catch chaining)
+    const counts = await fetchStars(ids); // { [postId]: number }
+
+    // update each visible row
+    for (const el of document.querySelectorAll('#feed .item')) {
+      const id = el.getAttribute('data-id');
+      if (!id) continue;
+      const n = counts[id];
+      const countEl = el.querySelector('[data-star-count]');
+      if (countEl && typeof n === 'number') {
+        countEl.textContent = String(n);
       }
-    } catch (e) {
-      console.warn("refreshStarsInView error:", e);
     }
+  } catch (err) {
+    console.warn('refreshStarsInView error:', err);
   }
+}
+
 
   /* ---------------- Stars: toggle handler ---------------- */
-  feedEl.addEventListener("click", async (ev) => {
-    const a = ev.target.closest(".star-toggle");
-    if (!a) return;
-    ev.preventDefault();
+  feedEl.addEventListener('click', async (ev) => {
+  const btn = ev.target.closest('[data-star-btn]');
+  if (!btn) return;
 
-    const id = a.getAttribute("data-id");
-    if (!id) return;
+  ev.preventDefault();
 
-    try {
-      // Ensure wallet connection
-      let addr = await getAddress().catch(() => null);
-      if (!addr) {
-        await connectWallet();
-        addr = await getAddress().catch(() => null);
-        if (!addr) throw new Error("Wallet not connected.");
-      }
+  const itemEl = btn.closest('.item');
+  const postId = itemEl?.getAttribute('data-id');
+  if (!postId) return;
 
-      // Toggle server-side & get new state
-      const result = await postStarToggle(id, addr); // expect { ok, starred, count }
-      if (!result?.ok) throw new Error("Toggle failed.");
+  const dir = btn.getAttribute('data-dir') || 'up'; // keep your current API
+  const countEl = itemEl.querySelector('[data-star-count]');
 
-      // Charge 1 KRN only when starring (not when unstarring)
-      if (result.starred) {
-        await payOneKRN(1);
-      }
+  btn.setAttribute('aria-busy', 'true');
+  btn.disabled = true;
 
-      // Update UI
-      a.setAttribute("aria-pressed", result.starred ? "true" : "false");
-      const countEl = a.parentElement?.querySelector(`.star-count[data-id="${CSS.escape(id)}"]`);
-      if (countEl) countEl.textContent = String(result.count ?? 0);
-    } catch (e) {
-      console.error("star toggle error:", e);
-      alert("Could not process star. Please try again.");
+  try {
+    // IMPORTANT: await + try/catch (no .catch chaining)
+    const res = await postStarToggle(postId, dir); // { ok, count } in no-pay mode
+    if (res && typeof res.count === 'number' && countEl) {
+      countEl.textContent = String(res.count);
     }
-  });
+  } catch (err) {
+    console.error('star toggle error:', err);
+    alert('Could not process star. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
+  }
+});
 
   /* ---------------- History link handlers ---------------- */
   olderLink?.addEventListener("click", (e) => {
