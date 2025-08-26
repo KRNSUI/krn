@@ -2,7 +2,6 @@
 // Centralized bad-word / sensitive-pattern list + sanitizer
 
 import { payOneKRN, connectWallet, getAddress } from "./slush.js";
-import { fetchStars, postStarToggle } from "./stars.js";
 
 const BANNED_PATTERNS = [
   // --- slurs / harassment (examples; extend as needed) ---

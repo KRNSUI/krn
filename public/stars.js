@@ -1,4 +1,24 @@
-// public/stars.js
+// public/stars.js (client helpers)
+
+export async function fetchStars(ids = []) {
+  if (!ids.length) return {};
+  const url = new URL("/stars", location.origin);
+  url.searchParams.set("ids", ids.join(","));
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`stars fetch ${res.status}`);
+  return res.json(); // { [postId]: count }
+}
+
+export async function postStarToggle(postId, dir = "up") {
+  const res = await fetch("/stars/toggle", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ postId, dir }),
+  });
+  if (!res.ok) throw new Error(`stars toggle ${res.status}`);
+  return res.json(); // { ok: true, count }
+}
+
 
 const FREE_MODE = true; // ⬅ set true for no-payment testing
 
