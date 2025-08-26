@@ -71,3 +71,42 @@ function json(body, status = 200) {
     headers: { "content-type": "application/json; charset=utf-8" },
   });
 }
+
+export async function onRequestPost({ request, env }) {
+  try {
+    const { complaintId, action, payload } = await request.json();
+    if (!complaintId || !action || !payload?.from) {
+      return new Response("Bad request", { status: 400 });
+    }
+
+    const addr = String(payload.from).toLowerCase();
+
+    // TODO: Verify tx digest on Sui RPC:
+    // - that it moved exactly 1 KRN of KRN_TYPE
+    // - from addr to TREASURY
+    // - (optionally) memo matches `${action}:${complaintId}`
+
+    if (action === "star") {
+      await env.KRN_DB.prepare(
+        "INSERT OR IGNORE INTO stars (complaint_id, addr) VALUES (?, ?)"
+      ).bind(complaintId, addr).run();
+    } else if (action === "unstar") {
+      await env.KRN_DB.prepare(
+        "DELETE FROM stars WHERE complaint_id = ? AND lower(addr) = ?"
+      ).bind(complaintId, addr).run();
+    } else {
+      return new Response("Unknown action", { status: 400 });
+    }
+
+    // Return new count
+    const countRow = await env.KRN_DB.prepare(
+      "SELECT COUNT(*) AS cnt FROM stars WHERE complaint_id = ?"
+    ).bind(complaintId).first();
+
+    return new Response(JSON.stringify({ ok: true, count: Number(countRow?.cnt || 0) }), {
+      headers: { "content-type": "application/json" }
+    });
+  } catch (e) {
+    return new Response("Server error", { status: 500 });
+  }
+}

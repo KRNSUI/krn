@@ -384,3 +384,29 @@ textarea{ min-height:10rem }
 .badge.buy { background: var(--acc1, #ff6a00); }
 .badge.scan { background: #1a73e8; }
 .badge.telegram { background: #0088cc; }
+
+.star-row {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  margin-top: .35rem;
+  user-select: none;
+}
+
+.star-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .05s ease, color .15s ease;
+}
+.star-btn:hover { color: var(--acc2); transform: scale(1.05); }
+.star-btn[aria-pressed="true"] { color: var(--acc1); text-shadow: 0 0 8px rgba(255,106,0,.35); }
+
+.star-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}

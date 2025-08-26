@@ -1,5 +1,7 @@
 // public/feed.js
 import { censorText } from "./censor.js";
+import { connectWallet, getAddress, payOneKRN } from "./slush.js";
+import { fetchStars, postStarToggle } from "./stars.js";
 
 (() => {
   const feedEl = document.getElementById("feed");
@@ -47,10 +49,12 @@ import { censorText } from "./censor.js";
     if (typeof obj.complaint === "string") return obj.complaint;
     if (obj.text) return String(obj.text);
     if (obj.message) return String(obj.message);
+    if (obj.data?.text) return String(obj.data.text);
+    if (obj.data?.message) return String(obj.data.message);
     return "";
   };
 
-  /* ---------------- Inject “Older/Newer” text links (no HTML edits needed) ---------------- */
+  /* ---------------- Inject “Older/Newer/Refresh” links ---------------- */
   const nav = document.getElementById("feed-nav") || (() => {
     const d = document.createElement("div");
     d.id = "feed-nav";
@@ -67,7 +71,6 @@ import { censorText } from "./censor.js";
   const olderLink = nav.querySelector("#older-link");
   const newerLink = nav.querySelector("#newer-link");
 
-  // lightweight styles if you haven't added CSS; safe to omit
   if (!document.getElementById("feed-nav-inline-style")) {
     const style = document.createElement("style");
     style.id = "feed-nav-inline-style";
@@ -76,18 +79,23 @@ import { censorText } from "./censor.js";
       .feed-link:hover{text-decoration:underline;opacity:1}
       .feed-link.hidden{display:none}
       .feed-link.is-loading{pointer-events:none;opacity:.6}
+      .stars{margin-top:.25rem;display:inline-flex;align-items:center;gap:.4rem}
+      .star-toggle{display:inline-block;text-decoration:none;font-weight:700}
+      .star-toggle[aria-pressed="true"]{filter:brightness(1.2)}
+      .star-count{opacity:.85;font-variant-numeric:tabular-nums}
     `;
     document.head.appendChild(style);
   }
 
   /* ---------------- Paging state ---------------- */
-  let cursor = null;     // created_at of last visible item (for /complaints?before=…)
+  let cursor = null;      // created_at of last visible item
   let hasHistory = false; // whether we've paged older at least once
   let isLoading = false;
 
   /* ---------------- Load feed (supports append + cursor) ---------------- */
   async function load({ append = false } = {}) {
     try {
+      isLoading = true;
       const url = new URL("/complaints", location.origin);
       url.searchParams.set("limit", String(FETCH_LIMIT));
       if (append && cursor) url.searchParams.set("before", cursor);
@@ -100,13 +108,11 @@ import { censorText } from "./censor.js";
         if (!append) {
           feedEl.innerHTML = `<div class="muted s">No complaints yet.</div>`;
         }
-        // if no more, hide Older
         olderLink?.classList.add("hidden");
         return;
       }
 
       const html = list.map(renderItem).join("");
-
       if (append) {
         feedEl.insertAdjacentHTML("beforeend", html);
         hasHistory = true;
@@ -114,6 +120,9 @@ import { censorText } from "./censor.js";
         feedEl.innerHTML = html;
         hasHistory = false;
       }
+
+      // update stars for everything currently in DOM
+      await refreshStarsInView();
 
       // move cursor to the last item we just drew
       const last = list[list.length - 1];
@@ -125,15 +134,15 @@ import { censorText } from "./censor.js";
         null;
 
       // toggle links
-      // show Older if we likely have more (equal page size)
       if (olderLink) olderLink.classList.toggle("hidden", list.length < FETCH_LIMIT);
-      // show Newer only if we’ve gone into history
       if (newerLink) newerLink.classList.toggle("hidden", !hasHistory);
     } catch (e) {
       console.error("feed load error:", e);
       if (!append) {
         feedEl.innerHTML = `<div class="muted s">Could not load complaints.</div>`;
       }
+    } finally {
+      isLoading = false;
     }
   }
 
@@ -147,7 +156,6 @@ import { censorText } from "./censor.js";
 
     const { text: censored } = censorText(raw);
     const preview = twoLinePreview(censored);
-
     const needsReveal = censored !== raw || raw.split(/\r?\n/).length > 2;
 
     return `
@@ -159,16 +167,18 @@ import { censorText } from "./censor.js";
         </pre>
         ${
           needsReveal
-            ? `<a href="#" class="reveal-link" data-id="${$esc(
-                id
-              )}" data-state="closed">Reveal original</a>`
+            ? `<a href="#" class="reveal-link" data-id="${$esc(id)}" data-state="closed">Reveal original</a>`
             : ""
         }
+        <div class="stars" data-stars-for="${$esc(id)}">
+          <a href="#" class="star-toggle" data-id="${$esc(id)}" aria-pressed="false" title="Star (costs 1 KRN)">★</a>
+          <span class="star-count" data-id="${$esc(id)}">0</span>
+        </div>
       </div>
     `;
   }
 
-  /* ---------------- Reveal / hide original ---------------- */
+  /* ---------------- Reveal / hide original (event delegation) ---------------- */
   feedEl.addEventListener("click", async (ev) => {
     const link = ev.target.closest(".reveal-link");
     if (!link) return;
@@ -180,7 +190,7 @@ import { censorText } from "./censor.js";
     if (!itemEl) return;
 
     const shortSpan = itemEl.querySelector('span[data-variant="short"]');
-    const fullSpan = itemEl.querySelector('span[data-variant="full"]');
+    const fullSpan  = itemEl.querySelector('span[data-variant="full"]');
 
     if (state === "closed") {
       try {
@@ -189,15 +199,11 @@ import { censorText } from "./censor.js";
 
         let fullRaw = "";
         try {
-          const r = await fetch(
-            `/complaints?id=${encodeURIComponent(id)}&reveal=1`,
-            { cache: "no-store" }
-          );
+          const r = await fetch(`/complaints?id=${encodeURIComponent(id)}&reveal=1`, { cache: "no-store" });
           const payload = await r.json().catch(() => ({}));
           fullRaw = extractFullText(payload);
         } catch {}
 
-        // fallback to embedded original if API didn't provide it
         if (!fullRaw) {
           const b64 = itemEl.getAttribute("data-raw-b64") || "";
           if (b64) {
@@ -222,6 +228,68 @@ import { censorText } from "./censor.js";
     }
   });
 
+  /* ---------------- Stars: load counts for visible items ---------------- */
+  async function refreshStarsInView() {
+    try {
+      const ids = Array.from(feedEl.querySelectorAll(".item[data-id]")).map(n =>
+        n.getAttribute("data-id")
+      ).filter(Boolean);
+      if (!ids.length) return;
+
+      const addr = await getAddress().catch(() => null);
+      const map = await fetchStars(ids, addr); // expect { [id]: { count, starred } }
+
+      for (const id of ids) {
+        const row = feedEl.querySelector(`.stars[data-stars-for="${CSS.escape(id)}"]`);
+        if (!row) continue;
+        const countEl = row.querySelector(`.star-count[data-id="${CSS.escape(id)}"]`);
+        const toggleEl = row.querySelector(`.star-toggle[data-id="${CSS.escape(id)}"]`);
+        const info = map?.[id] || { count: 0, starred: false };
+        if (countEl) countEl.textContent = String(info.count ?? 0);
+        if (toggleEl) toggleEl.setAttribute("aria-pressed", info.starred ? "true" : "false");
+      }
+    } catch (e) {
+      console.warn("refreshStarsInView error:", e);
+    }
+  }
+
+  /* ---------------- Stars: toggle handler ---------------- */
+  feedEl.addEventListener("click", async (ev) => {
+    const a = ev.target.closest(".star-toggle");
+    if (!a) return;
+    ev.preventDefault();
+
+    const id = a.getAttribute("data-id");
+    if (!id) return;
+
+    try {
+      // Ensure wallet connection
+      let addr = await getAddress().catch(() => null);
+      if (!addr) {
+        await connectWallet();
+        addr = await getAddress().catch(() => null);
+        if (!addr) throw new Error("Wallet not connected.");
+      }
+
+      // Toggle server-side & get new state
+      const result = await postStarToggle(id, addr); // expect { ok, starred, count }
+      if (!result?.ok) throw new Error("Toggle failed.");
+
+      // Charge 1 KRN only when starring (not when unstarring)
+      if (result.starred) {
+        await payOneKRN(1);
+      }
+
+      // Update UI
+      a.setAttribute("aria-pressed", result.starred ? "true" : "false");
+      const countEl = a.parentElement?.querySelector(`.star-count[data-id="${CSS.escape(id)}"]`);
+      if (countEl) countEl.textContent = String(result.count ?? 0);
+    } catch (e) {
+      console.error("star toggle error:", e);
+      alert("Could not process star. Please try again.");
+    }
+  });
+
   /* ---------------- History link handlers ---------------- */
   olderLink?.addEventListener("click", (e) => {
     e.preventDefault();
@@ -232,7 +300,6 @@ import { censorText } from "./censor.js";
   newerLink?.addEventListener("click", (e) => {
     e.preventDefault();
     if (isLoading) return;
-    // reset to newest page
     cursor = null;
     hasHistory = false;
     load({ append: false });
