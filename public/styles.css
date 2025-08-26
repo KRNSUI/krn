@@ -255,6 +255,49 @@ textarea{ min-height:10rem }
 .holders .addr { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 70%; }
 .holders .amt { font-weight:600; }
 
+/* ===== Desktop: equal height, no form scrollbars, animated border clipped ===== */
+@media (min-width: 900px) {
+  .krn-layout {
+    align-items: stretch;
+    grid-auto-rows: minmax(0, auto);
+  }
+
+  .form-col,
+  .feed-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* LEFT: form never scrolls; hide conic-gradient bleed */
+  .form-col .card {
+    flex: 1 1 auto;
+    min-height: auto;
+    overflow: hidden !important;   
+  }
+  .form-col .card::before {
+    inset: 0;             
+  }
+  .form-col textarea {
+    flex-grow: 1;               
+    min-height: 10rem;
+    max-height: 40vh;         
+  }
+
+  /* RIGHT: feed is the only scroller */
+  .feed-col .feed {
+    flex: 1 1 auto;
+    min-height: auto;
+    max-height: 72vh;
+    overflow: auto;        
+  }
+}
+
+/* Optional: avoid layout shift when feed gets a scrollbar (desktop only) */
+@media (min-width: 900px) {
+  .feed-col .feed { scrollbar-gutter: stable both-edges; }
+}
+
 /* Feed item compact mode when no reveal link */
 .item {
   padding: .55rem .25rem;

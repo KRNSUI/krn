@@ -1,0 +1,21 @@
+/* ===== Mobile polish ===== */
+@media (max-width: 699px) {
+  /* Keep stacked layout */
+  .krn-layout {
+    grid-template-columns: 1fr;
+  }
+
+  /* Smaller feed container on mobile */
+  .feed {
+    max-height: 48vh;
+    overflow: auto;
+  }
+
+  /* Full-width, centered submit button on mobile */
+  .form-col .card button[type="submit"],
+  .form-col .card .btn {
+    width: 100%;
+    display: inline-block;
+    text-align: center;
+  }
+}
