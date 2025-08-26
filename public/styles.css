@@ -255,10 +255,10 @@ textarea{ min-height:10rem }
 .holders .addr { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 70%; }
 .holders .amt { font-weight:600; }
 
-/* ===== Desktop equal-height fix (non-destructive) ===== */
+/* ===== Desktop: equal height, no form scrollbars, animated border clipped ===== */
 @media (min-width: 900px) {
   .krn-layout {
-    align-items: stretch;           
+    align-items: stretch;
     grid-auto-rows: minmax(0, auto);
   }
 
@@ -266,36 +266,37 @@ textarea{ min-height:10rem }
   .feed-col {
     display: flex;
     flex-direction: column;
-    min-height: 0;             
+    min-height: 0;
   }
 
-  .form-col .card,
+  /* LEFT: form never scrolls; hide conic-gradient bleed */
+  .form-col .card {
+    flex: 1 1 auto;
+    min-height: auto;
+    overflow: hidden !important;   
+  }
+  .form-col .card::before {
+    inset: 0;             
+  }
+  .form-col textarea {
+    flex-grow: 1;               
+    min-height: 10rem;
+    max-height: 40vh;         
+  }
+
+  /* RIGHT: feed is the only scroller */
   .feed-col .feed {
     flex: 1 1 auto;
-    min-height: auto;           
-    max-height: 72vh;         
-    overflow: auto;               
+    min-height: auto;
+    max-height: 72vh;
+    overflow: auto;        
   }
 }
 
-/* Desktop form column sizing */
-@media (min-width: 700px) {
-  .form-col .card {
-    flex: 1 1 auto;          /* let it grow/shrink evenly with feed */
-    min-height: auto;        /* remove the forced 70vh */
-    height: 100%;            /* stretch to available grid row height */
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Keep textarea flexible but not overflowing */
-  .form-col textarea {
-    flex-grow: 1;            /* textarea grows to fill available vertical space */
-    min-height: 10rem;       /* fallback min height */
-    max-height: 40vh;        /* prevent it from ballooning too tall */
-  }
+/* Optional: avoid layout shift when feed gets a scrollbar (desktop only) */
+@media (min-width: 900px) {
+  .feed-col .feed { scrollbar-gutter: stable both-edges; }
 }
-
 
 /* Feed item compact mode when no reveal link */
 .item {
