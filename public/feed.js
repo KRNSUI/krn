@@ -2,6 +2,8 @@
 import { censorText } from "./censor.js";
 import { connectWallet, getAddress, payOneKRN } from "./slush.js";
 import { fetchStars, postStarToggle } from "./stars.js";
+import { hydrateStarCounts, initStars } from "./stars.js";
+
 
 (() => {
   const feedEl = document.getElementById("feed");
@@ -118,6 +120,8 @@ import { fetchStars, postStarToggle } from "./stars.js";
         hasHistory = true;
       } else {
         feedEl.innerHTML = html;
+          await hydrateStarCounts(feedEl);
+          initStars(feedEl);
         hasHistory = false;
       }
 

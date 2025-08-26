@@ -1,75 +1,52 @@
-// functions/stars/toggle.js
-const KRN_TYPE = "0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN";
-const KRN_DECIMALS = 9;
-
-// ⬇⬇⬇  set to false for no-payment / no-wallet mode
-const VERIFY_ON = false;
-
+// /functions/stars/toggle.js
 export async function onRequestPost({ request, env }) {
   try {
-    const body = await request.json().catch(() => ({}));
-    let { postId, addr, txDigest } = body || {};
-
-    if (!postId) return json({ ok: false, error: "missing postId" }, 400);
-
-    // In free mode allow missing wallet/tx; generate a client id if needed
-    if (!VERIFY_ON) {
-      addr ||= await getOrSetClientId(request);
-    } else {
-      if (!addr || !txDigest) {
-        return json({ ok: false, error: "missing addr/txDigest" }, 400);
-      }
-      const ok = await verifyPayment(txDigest, addr, env);
-      if (!ok) return json({ ok: false, error: "payment not verified" }, 400);
+    if (!env.KRN_DB) {
+      return json({ ok: false, error: "KRN_DB binding missing" }, 500);
     }
 
-    // Toggle
-    const existing = await env.KRN_DB
-      .prepare(`SELECT 1 FROM stars WHERE post_id=? AND addr=?`)
-      .bind(postId, addr)
-      .first();
-
-    if (existing) {
-      await env.KRN_DB.prepare(`DELETE FROM stars WHERE post_id=? AND addr=?`)
-        .bind(postId, addr).run();
-    } else {
-      await env.KRN_DB.prepare(`INSERT OR IGNORE INTO stars (post_id, addr) VALUES (?, ?)`)
-        .bind(postId, addr).run();
+    // Body: { id: string, dir: "up" | "down", demo?: boolean }
+    const { id, dir /*, demo */ } = await request.json().catch(() => ({}));
+    if (!id || !["up", "down"].includes(dir)) {
+      return json({ ok: false, error: "bad input" }, 400);
     }
+
+    // Ensure the table exists (no-op after first time)
+    await env.KRN_DB.prepare(`
+      CREATE TABLE IF NOT EXISTS star_counts (
+        id TEXT PRIMARY KEY,
+        count INTEGER NOT NULL DEFAULT 0
+      )
+    `).run();
+
+    // +1 for "up", -1 for "down"; never let it go below 0
+    const delta = dir === "up" ? 1 : -1;
+
+    await env.KRN_DB.batch([
+      env.KRN_DB.prepare(
+        "INSERT OR IGNORE INTO star_counts (id, count) VALUES (?, 0)"
+      ).bind(id),
+      env.KRN_DB.prepare(
+        "UPDATE star_counts SET count = MAX(count + ?, 0) WHERE id = ?"
+      ).bind(delta, id),
+    ]);
 
     const row = await env.KRN_DB
-      .prepare(`SELECT COUNT(*) AS c FROM stars WHERE post_id=?`)
-      .bind(postId)
+      .prepare("SELECT count FROM star_counts WHERE id = ?")
+      .bind(id)
       .first();
 
-    return json({ ok: true, starred: !existing, count: Number(row?.c || 0) });
-  } catch (e) {
-    console.error("stars/toggle error:", e);
+    return json({ ok: true, count: row?.count ?? 0 });
+  } catch (err) {
+    console.error("star toggle error:", err);
     return json({ ok: false, error: "server error" }, 500);
   }
 }
 
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status, headers: { "content-type": "application/json" }
+/* ---------- helpers ---------- */
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
   });
 }
-
-// Create/reuse a stable per-browser id so users can toggle their own star
-async function getOrSetClientId(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/krn_client=([a-zA-Z0-9_-]+)/);
-  const id = match?.[1] || cryptoRandomId();
-  // set cookie on response by returning a Set-Cookie header from caller (CF Pages can’t
-  // mutate response here easily), so we encode the id into “addr” and let the client
-  // also persist it; this works fine without cookie too:
-  return `client:${id}`;
-}
-
-function cryptoRandomId() {
-  const a = new Uint8Array(16);
-  crypto.getRandomValues(a);
-  return [...a].map(n => n.toString(16).padStart(2, "0")).join("");
-}
-
-/* ---- verifyPayment stays unchanged; it simply won’t be called when VERIFY_ON === false ---- */
