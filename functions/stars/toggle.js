@@ -1,75 +1,159 @@
-// functions/stars/toggle.js
-const KRN_TYPE = "0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN";
-const KRN_DECIMALS = 9;
-
-// ⬇⬇⬇  set to false for no-payment / no-wallet mode
-const VERIFY_ON = false;
-
+// /functions/stars/toggle.js
 export async function onRequestPost({ request, env }) {
   try {
-    const body = await request.json().catch(() => ({}));
-    let { postId, addr, txDigest } = body || {};
+    if (!env.KRN_DB) {
+      return json({ ok: false, error: "KRN_DB binding missing" }, 500);
+    }
 
-    if (!postId) return json({ ok: false, error: "missing postId" }, 400);
+    // Body: { id: string, dir: "up" | "down", addr: string, demo?: boolean }
+    const { id, dir, addr, demo } = await request.json().catch(() => ({}));
+    if (!id || !["up", "down"].includes(dir) || !addr) {
+      return json({ ok: false, error: "bad input: need id, dir (up/down), and addr" }, 400);
+    }
 
-    // In free mode allow missing wallet/tx; generate a client id if needed
-    if (!VERIFY_ON) {
-      addr ||= await getOrSetClientId(request);
-    } else {
-      if (!addr || !txDigest) {
-        return json({ ok: false, error: "missing addr/txDigest" }, 400);
+    // Ensure the stars table exists (no-op after first time)
+    await env.KRN_DB.prepare(`
+      CREATE TABLE IF NOT EXISTS stars (
+        post_id TEXT NOT NULL,
+        addr    TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (post_id, addr)
+      )
+    `).run();
+
+    let operation;
+    let newCount;
+    let cost = 0;
+    let reason = "";
+
+    if (dir === "up") {
+      // Adding a star (favoriting)
+      try {
+        // Check if user already starred this post
+        const existing = await env.KRN_DB
+          .prepare("SELECT 1 FROM stars WHERE post_id = ? AND addr = ?")
+          .bind(id, addr)
+          .first();
+
+        if (existing) {
+          return json({ ok: false, error: "Already starred this post" }, 400);
+        }
+
+        // Count total stars on this post to determine cost
+        const totalStars = await env.KRN_DB
+          .prepare("SELECT COUNT(*) as count FROM stars WHERE post_id = ?")
+          .bind(id)
+          .first();
+        
+        const currentStarCount = totalStars?.count || 0;
+        
+        // Calculate cost: first star = 1 KRN, additional = 2 KRN, 3 KRN, etc.
+        if (currentStarCount === 0) {
+          cost = 1; // First star costs 1 KRN
+          reason = "First star on post";
+        } else {
+          cost = currentStarCount + 1; // 2nd star = 2 KRN, 3rd = 3 KRN, etc.
+          reason = `${currentStarCount + 1}th star on post`;
+        }
+
+        // Add the star
+        await env.KRN_DB
+          .prepare("INSERT INTO stars (post_id, addr) VALUES (?, ?)")
+          .bind(id, addr)
+          .run();
+
+        operation = "added";
+      } catch (err) {
+        if (err.message.includes("UNIQUE constraint failed")) {
+          return json({ ok: false, error: "Already starred this post" }, 400);
+        }
+        throw err;
       }
-      const ok = await verifyPayment(txDigest, addr, env);
-      if (!ok) return json({ ok: false, error: "payment not verified" }, 400);
-    }
-
-    // Toggle
-    const existing = await env.KRN_DB
-      .prepare(`SELECT 1 FROM stars WHERE post_id=? AND addr=?`)
-      .bind(postId, addr)
-      .first();
-
-    if (existing) {
-      await env.KRN_DB.prepare(`DELETE FROM stars WHERE post_id=? AND addr=?`)
-        .bind(postId, addr).run();
     } else {
-      await env.KRN_DB.prepare(`INSERT OR IGNORE INTO stars (post_id, addr) VALUES (?, ?)`)
-        .bind(postId, addr).run();
+      // Removing a star (unfavoriting)
+      
+      // First check if this is the user's own star
+      const ownStar = await env.KRN_DB
+        .prepare("SELECT 1 FROM stars WHERE post_id = ? AND addr = ?")
+        .bind(id, addr)
+        .first();
+
+      if (ownStar) {
+        // Removing own star - count how many stars this user has on this post
+        const userStarCount = await env.KRN_DB
+          .prepare("SELECT COUNT(*) as count FROM stars WHERE post_id = ? AND addr = ?")
+          .bind(id, addr)
+          .first();
+        
+        const userStarsOnPost = userStarCount?.count || 0;
+        
+        // Calculate cost: 2 KRN, 4 KRN, 6 KRN (doubles each time)
+        cost = userStarsOnPost * 2;
+        reason = `Removing ${userStarsOnPost}th own star`;
+        
+        // Remove the star
+        const result = await env.KRN_DB
+          .prepare("DELETE FROM stars WHERE post_id = ? AND addr = ?")
+          .bind(id, addr)
+          .run();
+
+        if (result.changes === 0) {
+          return json({ ok: false, error: "No star found to remove" }, 400);
+        }
+      } else {
+        // Removing someone else's star - this costs double and multiplies
+        const totalStars = await env.KRN_DB
+          .prepare("SELECT COUNT(*) as count FROM stars WHERE post_id = ?")
+          .bind(id)
+          .first();
+        
+        const currentStarCount = totalStars?.count || 0;
+        
+        // Double the charge for removing others' stars
+        cost = currentStarCount * 2;
+        reason = `Removing someone else's star (${currentStarCount} total stars on post)`;
+        
+        // Remove a random star from this post (not the user's own)
+        const result = await env.KRN_DB
+          .prepare("DELETE FROM stars WHERE post_id = ? AND addr != ? LIMIT 1")
+          .bind(id, addr)
+          .run();
+
+        if (result.changes === 0) {
+          return json({ ok: false, error: "No other stars found to remove" }, 400);
+        }
+      }
+
+      operation = "removed";
     }
 
-    const row = await env.KRN_DB
-      .prepare(`SELECT COUNT(*) AS c FROM stars WHERE post_id=?`)
-      .bind(postId)
+    // Get updated count for this post
+    const countResult = await env.KRN_DB
+      .prepare("SELECT COUNT(*) as count FROM stars WHERE post_id = ?")
+      .bind(id)
       .first();
 
-    return json({ ok: true, starred: !existing, count: Number(row?.c || 0) });
-  } catch (e) {
-    console.error("stars/toggle error:", e);
+    newCount = countResult?.count ?? 0;
+
+    return json({ 
+      ok: true, 
+      count: newCount, 
+      operation,
+      cost,
+      reason,
+      message: dir === "up" ? `Star added successfully (${cost} KRN)` : `Star removed successfully (${cost} KRN)`
+    });
+
+  } catch (err) {
+    console.error("star toggle error:", err);
     return json({ ok: false, error: "server error" }, 500);
   }
 }
 
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status, headers: { "content-type": "application/json" }
+/* ---------- helpers ---------- */
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
   });
 }
-
-// Create/reuse a stable per-browser id so users can toggle their own star
-async function getOrSetClientId(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/krn_client=([a-zA-Z0-9_-]+)/);
-  const id = match?.[1] || cryptoRandomId();
-  // set cookie on response by returning a Set-Cookie header from caller (CF Pages can’t
-  // mutate response here easily), so we encode the id into “addr” and let the client
-  // also persist it; this works fine without cookie too:
-  return `client:${id}`;
-}
-
-function cryptoRandomId() {
-  const a = new Uint8Array(16);
-  crypto.getRandomValues(a);
-  return [...a].map(n => n.toString(16).padStart(2, "0")).join("");
-}
-
-/* ---- verifyPayment stays unchanged; it simply won’t be called when VERIFY_ON === false ---- */
