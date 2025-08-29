@@ -271,20 +271,21 @@ const App = () => {
       createElement('div', { className: 'krn-chart-section' },
         createElement('h3', null, 'KRN Token Statistics'),
         createElement('div', { className: 'chart-container' },
-          createElement('div', { className: 'chart-wrap' },
-            createElement('canvas', { id: 'priceChart', width: '800', height: '400' })
+          createElement('div', { className: 'chart-placeholder' },
+            createElement('p', null, 'Chart data will be available when deployed to Cloudflare Pages'),
+            createElement('p', { className: 'muted' }, 'Token statistics and holder information will be displayed here')
           )
         ),
         createElement('div', { className: 'token-info' },
           createElement('div', { className: 'token-details' },
             createElement('h4', null, 'Token Details'),
-            createElement('p', null, createElement('strong', null, 'Name: '), createElement('span', { id: 'coinName' }, 'KRN')),
-            createElement('p', null, createElement('strong', null, 'Symbol: '), createElement('span', { id: 'coinSymbol' }, 'KRN')),
-            createElement('p', null, createElement('strong', null, 'Total Supply: '), createElement('span', { id: 'coinSupply' }, '—'))
+            createElement('p', null, createElement('strong', null, 'Name: '), createElement('span', null, 'KRN')),
+            createElement('p', null, createElement('strong', null, 'Symbol: '), createElement('span', null, 'KRN')),
+            createElement('p', null, createElement('strong', null, 'Total Supply: '), createElement('span', null, '—'))
           ),
           createElement('div', { className: 'top-holders' },
             createElement('h4', null, 'Top Holders'),
-            createElement('ul', { id: 'holdersList', className: 'holders' })
+            createElement('p', { className: 'muted' }, 'Holder information will be displayed here')
           )
         )
       ),
