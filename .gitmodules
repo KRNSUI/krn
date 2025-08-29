@@ -1,0 +1,3 @@
+[submodule "krnbot"]
+	path = krnbot
+	url = git@github.com:KRNSUI/krnbot.git

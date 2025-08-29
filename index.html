@@ -1,169 +1,93 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-
-  <!-- Meta (preview/SEO) -->
-  <meta name="description" content="KRN — Anonymous Complaints on Sui. No names, no emails, no tracking." />
-  <meta property="og:title" content="KRN — Anonymous Complaint" />
-  <meta property="og:description" content="Drop anonymous Complaints. Edge-native. $KRN on Sui." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://krn.fuck-out.com/" />
-
-  <!-- CSP -->
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self';
-                 img-src 'self' data: https://pbs.twimg.com https://img.shields.io;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karen on SUI - Anonymous Complaints Platform</title>
+  
+  <!-- Meta tags for SEO and social sharing -->
+  <meta name="description" content="Karen on SUI - Anonymous complaints platform on SUI blockchain. Post, favorite, and flag content using KRN tokens.">
+  <meta name="keywords" content="Karen, KRN, SUI, blockchain, anonymous, complaints, token, crypto">
+  <meta name="author" content="Karen on SUI Team">
+  
+  <!-- Open Graph tags -->
+  <meta property="og:title" content="Karen on SUI - Anonymous Complaints Platform">
+  <meta property="og:description" content="Post anonymous complaints on the SUI blockchain using KRN tokens">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://krn.fuck-out.com">
+  <meta property="og:image" content="https://pbs.twimg.com/profile_images/1959020302773755905/w-bp7w5i_400x400.jpg">
+  
+  <!-- Twitter Card tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Karen on SUI - Anonymous Complaints Platform">
+  <meta name="twitter:description" content="Post anonymous complaints on the SUI blockchain using KRN tokens">
+  <meta name="twitter:image" content="https://pbs.twimg.com/profile_images/1959020302773755905/w-bp7w5i_400x400.jpg">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="https://pbs.twimg.com/profile_images/1959020302773755905/w-bp7w5i_400x400.jpg">
+  
+  <!-- Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy" 
+        content="default-src 'self'; 
+                 script-src 'self' 'unsafe-inline' 'unsafe-eval';
                  style-src 'self' 'unsafe-inline';
-                 script-src 'self';
+                 img-src 'self' data: https://pbs.twimg.com https://img.shields.io;
+                 connect-src 'self' https://fullnode.mainnet.sui.io:443 https://api.cloudflare.com;
                  frame-src https://suiscan.xyz;
                  object-src 'none';
                  base-uri 'none';
                  form-action 'self'">
-
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="/public/styles.css">
+  <link rel="stylesheet" href="/public/mobile.css">
+</head>
+<body class="theme-dark">
+  <!-- Root element for the FlexNetJSX application -->
+  <div id="root">
+    <!-- Loading fallback -->
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+      <div style="text-align: center;">
+        <h1>Karen on SUI</h1>
+        <p>Loading application...</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load the FlexNetJSX integration -->
+  <script type="module" src="./src/integration.js"></script>
+  
+  <!-- Simple test script -->
+  <script>
+    console.log('🔧 Simple test script is running');
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('📄 DOM is loaded');
+      const root = document.getElementById('root');
+      if (root) {
+        console.log('🎯 Root element found:', root);
+      } else {
+        console.log('❌ Root element not found');
+      }
+    });
+  </script>
+  
+  <!-- Preserve existing Cloudflare functionality -->
   <script type="module" src="/public/feed.js"></script>
   <script src="/public/chart.js" defer></script>
   <script src="/public/censor.js" type="module"></script>
   <script type="module" src="/public/slush.js"></script>
   <script type="module" src="/public/stars.js"></script>
-
-
-  <title>$KRN on SUI | Anonymous Complaint</title>
-  <link rel="icon" type="image/png" href="https://pbs.twimg.com/profile_images/1959020302773755905/w-bp7w5i_400x400.jpg">
-  <link rel="stylesheet" href="/public/styles.css?v=krn-2025-08-24-1">
-  <link rel="stylesheet" href="/public/mobile.css?v=krn-2025-08-24-1">
   
-</head>
-<header class="center" style="margin-bottom:1.5rem;">
-  <img src="https://pbs.twimg.com/profile_images/1959020302773755905/w-bp7w5i_400x400.jpg" alt="KRN Banner" width="160" style="border-radius:50%; box-shadow:0 4px 12px rgba(0,0,0,.4);" />
-</header>
-<body>
-  <!-- Buy $KRN CTA -->
-<center><p class="muted s">
-  Not financial advice. Tokens are risky; do your own research.</p>
-  <p>
-  <a class="btn" href="https://blast.fun/token/0x76ff24af704e0b6d6a121ab23e5ea9e8343c29a0c50f664ab0f01b2f2858c758?ref=Aemon"
-     target="_blank" rel="noopener">
-    Buy $KRN on Blast.fun →
-  </a>
-</p></center>
-
-  <main class="container krn-layout">
-    <!-- Left: form -->
-    <section class="form-col">
-      <h2>$KRN on $SUI</h2>
-      <p class="muted">Submit an anonymous Complaint. No names; no emails; no tracking.</p>
-
-      <form method="post" action="/submit" class="card">
-        <!-- honeypot -->
-        <label class="hp" aria-hidden="true">Leave this field empty
-          <input type="text" name="website" tabindex="-1" autocomplete="off">
-        </label>
-
-        <label for="message">Your Complaints</label>
-        <textarea id="message" name="message" rows="12" maxlength="10000" required
-                  aria-describedby="msg-help"
-                  placeholder="Write clearly. Do not include personal identifiers."></textarea>
-        <p id="msg-help" class="muted s"><b>** By submitting, you agree not to include PII or unlawful content. **</b> <br>10k Character limit for those that don't breath... Shut it KRN</p>
-        <pr></pr>
-        <p id="msg-help" class="muted s">In the chaos of Web3’s endless lines and broken promises; there rose a figure, not a woman but an archetype; the eternal complainer, the seeker of managers, the voice that would not be silenced. From that voice $KRN was born; a token forged in the fires of grievance, sharpened by entitlement, and wrapped in the divine right to “speak to the blockchain’s manager.” Yet within the satire lies power; for $KRN gathers every complaint, every demand, every eye roll, and alchemizes them into a living record of accountability. What began as a meme of impatience now stands as myth; the Karen ascended, her spirit immortalized in orange flame, forever calling out the broken and bending reality to her will.</p>
-
-        <button type="submit">Submit</button>
-
-<div class="badges">
-  <a class="badge github" href="https://github.com/KRNSUI" target="_blank" rel="noopener">GitHub</a>
-  <a class="badge x" href="https://x.com/KRNonsui" target="_blank" rel="noopener">X (Twitter)</a>
-  <a class="badge buy" href="https://blast.fun/token/0x76ff24af704e0b6d6a121ab23e5ea9e8343c29a0c50f664ab0f01b2f2858c758?ref=Aemon" target="_blank" rel="noopener">Buy $KRN</a>
-  <a class="badge scan" href="https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs" target="_blank" rel="noopener">SuiScan</a>
-  <a class="badge telegram" href="https://t.me/+_o-Osjl6_-g1ZTEx" target="_blank" rel="noopener">Telegram</a>
-</div>
-
-
-      </form>
-            <p class="muted s">
-            * We do not endorse or verify any content.  
-            Do not include personal information, unlawful, or harmful material.
-          </p>
-    </section>
-
-    <!-- Right: recent feed -->
-    <aside class="feed-col">
-      <h2 class="h-sm">Recent Complaints</h2>
-          <p class="muted s">
-            Submissions are anonymous and user-generated.
-          </p>
-      <div id="feed" class="card feed">
-        <div class="muted s">Loading…</div>
-      </div>
-<div id="feed-nav" class="feed-nav">
-  <a href="#" id="refreshBtn">⟳ Refresh</a>
-  <a href="#" id="newer-link" class="feed-link hidden">← Newer</a>
-  <a href="#" id="older-link" class="feed-link">Older →</a>
-</div>
-    </aside>
-
-<!-- Price / Activity chart -->
-<section class="card chart-col">
-  <h2 class="h-sm">Activity ($KRN, ~24h)</h2>
-
-  <div class="chart-wrap" style="height:320px">
-    <canvas id="priceChart" style="width:100%;height:100%;display:block;"></canvas>
-  </div>
-
-  <p class="muted s" style="margin-top:.5rem">
-    This series shows hourly activity (tx count) proxied via Blockberry. For deep price/holders, open Suiscan:
-    <a class="btn" href="https://suiscan.xyz/mainnet/coin/0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN/txs"
-       target="_blank" rel="noopener">View on Suiscan →</a>
-  </p>
-</section>
-
-<!-- Coin details -->
-<section class="card" style="margin-top:1rem">
-  <h2 class="h-sm">$KRN — Coin Details</h2>
-  <div class="grid-2">
-    <div>
-      <div class="muted s">Name</div>
-      <div id="coinName" class="strong">—</div>
-    </div>
-    <div>
-      <div class="muted s">Symbol</div>
-      <div id="coinSymbol" class="strong">—</div>
-    </div>
-    <div>
-      <div class="muted s">Total Supply</div>
-      <div id="coinSupply" class="strong">—</div>
-    </div>
-  </div>
-
-  <div style="margin-top:1rem">
-    <div class="muted s">Top Holders</div>
-    <ul id="holdersList" class="holders">
-      <li class="muted s">Loading…</li>
-    </ul>
-  </div>
-</section>
-
-<div class="buy-social">
-  <div class="left">
-    <p class="muted s">
-      Not financial advice. Tokens are risky; do your own research.
-    </p>
-    <a class="btn" href="https://blast.fun/token/0x76ff24af704e0b6d6a121ab23e5ea9e8343c29a0c50f664ab0f01b2f2858c758?ref=Aemon"
-       target="_blank" rel="noopener">
-      Buy $KRN on Blast.fun →
-    </a>
-  </div>
-
-  <div class="right">
-    <a class="social-x" href="https://x.com/KRNonsui" target="_blank" rel="noopener" aria-label="Follow $KRN on X">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1227" width="28" height="28" fill="currentColor">
-        <path d="M714 0h241L489 511l462 716H714L444 784 147 1227H-94l489-543L-94 0h241l329 465L714 0z"/>
-      </svg>
-    </a>
-  </div>
-</div>
-
-  </main>
+  <!-- SUI Wallet detection -->
+  <script>
+    // Check for SUI wallet availability
+    window.addEventListener('load', () => {
+      if (typeof window.suiWallet !== 'undefined') {
+        console.log('✅ SUI Wallet detected');
+      } else {
+        console.log('⚠️ SUI Wallet not detected. Users will need to install it.');
+      }
+    });
+  </script>
 </body>
 </html>

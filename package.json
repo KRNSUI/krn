@@ -1,0 +1,63 @@
+{
+  "name": "krn-token-flexnetjsx",
+  "version": "1.0.0",
+  "description": "Karen on SUI application built with FlexNetJSX framework for SUI blockchain with AI chat integration",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "dev": "python3 -m http.server 8000",
+    "test": "echo \"No tests specified\" && exit 0",
+    "build": "echo \"No build process needed - zero-dependency app\" && exit 0",
+    "submodule:init": "git submodule update --init --recursive",
+    "submodule:update": "git submodule update --remote",
+    "docs": "echo \"Documentation available in docs/ directory\" && exit 0"
+  },
+  "keywords": [
+    "krn",
+    "sui",
+    "blockchain",
+    "flexnetjsx",
+    "functional-programming",
+    "anonymous-complaints",
+    "token",
+    "crypto",
+    "ai-chat",
+    "llm",
+    "cloudflare-workers"
+  ],
+      "author": "Karen on SUI Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KRNSUI/krn-token-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KRNSUI/krn-token-app/issues"
+  },
+  "homepage": "https://krn.fuck-out.com",
+  "devDependencies": {},
+  "engines": {},
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ],
+  "submodules": {
+    "krnbot": {
+      "url": "git@github.com:KRNSUI/krnbot.git",
+      "description": "AI chat functionality powered by Cloudflare Workers AI"
+    }
+  },
+  "framework": {
+    "name": "FlexNetJSX",
+    "version": "1.0.0",
+    "principles": [
+      "Functions as Primary Operations",
+      "Immutable State Management", 
+      "Functional Composition",
+      "Zero Dependencies",
+      "Browser Native Implementation"
+    ]
+  }
+}
