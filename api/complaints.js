@@ -1,4 +1,4 @@
-// functions/complaints.js
+// api/complaints.js
 export async function onRequestGet({ request, env }) {
   try {
     if (!env.KRN_DB) throw new Error("KRN_DB binding missing");

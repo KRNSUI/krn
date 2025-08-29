@@ -25,6 +25,9 @@ const createElement = (type, props, ...children) => {
 
 // Render virtual DOM to real DOM
 const render = (vnode, container) => {
+  // Reset hook index for new render cycle
+  hookIndex = 0;
+  
   // Clear container
   container.innerHTML = '';
   
@@ -105,17 +108,35 @@ const createComponent = (renderFn) => {
 
 // ===== HOOKS SYSTEM =====
 
+// Global state storage for hooks
+const hookStates = new Map();
+let hookIndex = 0;
+
 // State hook
 const useState = (initialValue) => {
-  let state = initialValue;
-  let setState = (newValue) => {
+  const currentIndex = hookIndex++;
+  
+  if (!hookStates.has(currentIndex)) {
+    hookStates.set(currentIndex, initialValue);
+  }
+  
+  const state = hookStates.get(currentIndex);
+  
+  const setState = (newValue) => {
     const newState = typeof newValue === 'function' ? newValue(state) : newValue;
     if (newState !== state) {
-      state = newState;
-      // Trigger re-render by dispatching a custom event
-      window.dispatchEvent(new CustomEvent('stateChanged', { detail: { state } }));
+      hookStates.set(currentIndex, newState);
+      // Only dispatch events for route changes to prevent infinite loops
+      if (newState.currentRoute && newState.currentRoute !== state?.currentRoute) {
+        if (!window.isReRendering) {
+          window.dispatchEvent(new CustomEvent('routeChanged', { 
+            detail: { route: newState.currentRoute } 
+          }));
+        }
+      }
     }
   };
+  
   return [state, setState];
 };
 

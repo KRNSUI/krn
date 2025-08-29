@@ -1,4 +1,4 @@
-// functions/bb.js
+// api/bb.js
 export async function onRequest({ request, env }) {
   const coinType =
     "0x278c12e3bcc279248ea3e316ca837244c3941399f2bf4598638f4a8be35c09aa::krn::KRN";

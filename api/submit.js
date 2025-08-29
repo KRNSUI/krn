@@ -25,8 +25,8 @@ export async function onRequestPost({ request, env }) {
     return new Response("Server error", { status: 500 });
   }
 }
-// functions/submit.js
-import { censorText } from "../public/censor.js"; // Pages Functions can import local modules
+// api/submit.js
+import { censorText } from "../src/core/utils/censor.js"; // Cloudflare Workers can import local modules
 
 export const onRequest = async ({ request, env }) => {
   try {

@@ -1,4 +1,4 @@
-// /functions/stars/toggle.js
+// /api/stars/toggle.js
 export async function onRequestPost({ request, env }) {
   try {
     if (!env.KRN_DB) {

@@ -6,6 +6,7 @@ import { subscribe, selectIsConnected, selectUserAddress, selectKRNBalance, sele
 import { Router, ROUTES } from '../router/router.js';
 import { WalletConnect, WalletStatus, KRNBalance } from './WalletConnect.js';
 import { ContentFeed } from './ContentFeed.js';
+import { HomePage, AboutPage, ManagerPage, EntitlementsPage, VotePage } from './pages/index.js';
 
 // ===== MAIN APP COMPONENT =====
 
@@ -24,14 +25,19 @@ const App = () => {
   // Subscribe to state changes
   useEffect(() => {
     const unsubscribe = subscribe((appState) => {
-      setState(prev => ({
-        ...prev,
-        isConnected: selectIsConnected(appState),
-        address: selectUserAddress(appState),
-        krnBalance: selectKRNBalance(appState),
-        theme: selectUI(appState).theme,
-        sidebarOpen: selectUI(appState).sidebarOpen
-      }));
+      try {
+        setState(prev => ({
+          ...prev,
+          isConnected: selectIsConnected(appState),
+          address: selectUserAddress(appState),
+          krnBalance: selectKRNBalance(appState),
+          // Preserve current theme unless it's explicitly changed
+          theme: prev.theme || selectUI(appState).theme,
+          sidebarOpen: selectUI(appState).sidebarOpen
+        }));
+      } catch (error) {
+        console.error('State subscription error:', error);
+      }
     });
 
     return unsubscribe;
@@ -39,11 +45,17 @@ const App = () => {
 
   // Subscribe to route changes
   useEffect(() => {
+    console.log('Setting up router subscription...');
     const unsubscribe = Router.subscribe((route) => {
-      setState(prev => ({
-        ...prev,
-        currentRoute: route
-      }));
+      try {
+        console.log('🎯 Router subscription received route:', route);
+        setState(prev => ({
+          ...prev,
+          currentRoute: route
+        }));
+      } catch (error) {
+        console.error('Router subscription error:', error);
+      }
     });
 
     return unsubscribe;
@@ -51,7 +63,13 @@ const App = () => {
 
   // Initialize router
   useEffect(() => {
-    Router.init();
+    try {
+      console.log('Initializing router...');
+      Router.init();
+      console.log('Router initialized successfully');
+    } catch (error) {
+      console.error('Router initialization error:', error);
+    }
   }, []);
 
   // Apply theme
@@ -93,7 +111,12 @@ const App = () => {
           href: ROUTES.HOME,
           onClick: (e) => {
             e.preventDefault();
-            Router.navigate(ROUTES.HOME);
+            try {
+              console.log('Navigating to HOME');
+              Router.navigate(ROUTES.HOME);
+            } catch (error) {
+              console.error('Navigation error to HOME:', error);
+            }
           }
         }, 'Home'),
         
@@ -102,7 +125,12 @@ const App = () => {
           href: ROUTES.ABOUT,
           onClick: (e) => {
             e.preventDefault();
-            Router.navigate(ROUTES.ABOUT);
+            try {
+              console.log('Navigating to ABOUT');
+              Router.navigate(ROUTES.ABOUT);
+            } catch (error) {
+              console.error('Navigation error to ABOUT:', error);
+            }
           }
         }, 'About'),
         
@@ -111,7 +139,12 @@ const App = () => {
           href: ROUTES.MANAGER,
           onClick: (e) => {
             e.preventDefault();
-            Router.navigate(ROUTES.MANAGER);
+            try {
+              console.log('Navigating to MANAGER');
+              Router.navigate(ROUTES.MANAGER);
+            } catch (error) {
+              console.error('Navigation error to MANAGER:', error);
+            }
           }
         }, 'Speak to the Manager'),
         
@@ -120,9 +153,29 @@ const App = () => {
           href: ROUTES.ENTITLEMENTS,
           onClick: (e) => {
             e.preventDefault();
-            Router.navigate(ROUTES.ENTITLEMENTS);
+            try {
+              console.log('Navigating to ENTITLEMENTS');
+              Router.navigate(ROUTES.ENTITLEMENTS);
+            } catch (error) {
+              console.error('Navigation error to ENTITLEMENTS:', error);
+            }
           }
         }, 'File a Complaint'),
+        
+        createElement('a', {
+          className: `nav-link ${state.currentRoute?.path === ROUTES.VOTE ? 'active' : ''}`,
+          href: ROUTES.VOTE,
+          onClick: (e) => {
+            e.preventDefault();
+            try {
+              console.log('🎯 VOTE navigation clicked');
+              console.log('Current state:', state);
+              Router.navigate(ROUTES.VOTE);
+            } catch (error) {
+              console.error('Navigation error to VOTE:', error);
+            }
+          }
+        }, 'Vote'),
         
         state.isConnected && createElement('a', {
           className: `nav-link ${state.currentRoute?.path === ROUTES.VOTE ? 'active' : ''}`,
@@ -239,6 +292,7 @@ const App = () => {
 
   // Render about page
   const renderAboutPage = () => {
+    console.log('🎯 Rendering About page...');
     return createElement('div', { className: 'page about-page' },
       createElement('div', { className: 'hero-section' },
         createElement('h2', null, 'About Karen on SUI'),
@@ -271,21 +325,20 @@ const App = () => {
       createElement('div', { className: 'krn-chart-section' },
         createElement('h3', null, 'KRN Token Statistics'),
         createElement('div', { className: 'chart-container' },
-          createElement('div', { className: 'chart-placeholder' },
-            createElement('p', null, 'Chart data will be available when deployed to Cloudflare Pages'),
-            createElement('p', { className: 'muted' }, 'Token statistics and holder information will be displayed here')
+          createElement('div', { className: 'chart-wrap' },
+            createElement('canvas', { id: 'priceChart', width: '800', height: '400' })
           )
         ),
         createElement('div', { className: 'token-info' },
           createElement('div', { className: 'token-details' },
             createElement('h4', null, 'Token Details'),
-            createElement('p', null, createElement('strong', null, 'Name: '), createElement('span', null, 'KRN')),
-            createElement('p', null, createElement('strong', null, 'Symbol: '), createElement('span', null, 'KRN')),
-            createElement('p', null, createElement('strong', null, 'Total Supply: '), createElement('span', null, '—'))
+            createElement('p', null, createElement('strong', null, 'Name: '), createElement('span', { id: 'coinName' }, 'KRN')),
+            createElement('p', null, createElement('strong', null, 'Symbol: '), createElement('span', { id: 'coinSymbol' }, 'KRN')),
+            createElement('p', null, createElement('strong', null, 'Total Supply: '), createElement('span', { id: 'coinSupply' }, '—'))
           ),
           createElement('div', { className: 'top-holders' },
             createElement('h4', null, 'Top Holders'),
-            createElement('p', { className: 'muted' }, 'Holder information will be displayed here')
+            createElement('ul', { id: 'holdersList', className: 'holders' })
           )
         )
       ),
@@ -323,6 +376,7 @@ const App = () => {
 
   // Render manager page (krnbot)
   const renderManagerPage = () => {
+    console.log('🎯 Rendering Manager page...');
     return createElement('div', { className: 'page manager-page' },
       createElement('div', { className: 'hero-section' },
         createElement('h2', null, 'Speak to the Manager'),
@@ -368,6 +422,7 @@ const App = () => {
 
   // Render entitlements page (original form and feed)
   const renderEntitlementsPage = () => {
+    console.log('🎯 Rendering Entitlements page...');
     return createElement('div', { className: 'page entitlements-page' },
       createElement('div', { className: 'hero-section' },
         createElement('h2', null, 'File a Complaint'),
@@ -529,27 +584,90 @@ const App = () => {
   // Render main content based on current route
   const renderMainContent = () => {
     const route = state.currentRoute?.path;
+    const requiresWallet = state.currentRoute?.requiresWallet;
+    console.log('🎯 renderMainContent called with route:', route, 'requiresWallet:', requiresWallet, 'state:', state);
+    
+    // If no route is set, default to home
+    if (!route) {
+      console.log('No route set, defaulting to HOME');
+      return createElement(HomePage);
+    }
+    
+    let pageComponent;
     
     switch (route) {
       case ROUTES.HOME:
-        return renderHomePage();
+        console.log('Rendering HomePage');
+        pageComponent = createElement(HomePage);
+        break;
       case ROUTES.ABOUT:
-        return renderAboutPage();
+        console.log('Rendering AboutPage');
+        pageComponent = createElement(AboutPage);
+        break;
       case ROUTES.MANAGER:
-        return renderManagerPage();
+        console.log('Rendering ManagerPage');
+        pageComponent = createElement(ManagerPage);
+        break;
       case ROUTES.ENTITLEMENTS:
-        return renderEntitlementsPage();
+        console.log('Rendering EntitlementsPage');
+        pageComponent = createElement(EntitlementsPage);
+        break;
       case ROUTES.VOTE:
-        return renderVotePage();
+        console.log('🎯 Rendering VotePage');
+        try {
+          pageComponent = createElement(VotePage);
+          console.log('Created VotePage element successfully');
+        } catch (error) {
+          console.error('Error creating VotePage:', error);
+          pageComponent = createElement('div', { className: 'page vote-page' },
+            createElement('h2', null, 'Error Loading Vote Page'),
+            createElement('p', null, 'There was an error loading the vote page. Please try again.'),
+            createElement('p', null, 'Error: ' + error.message)
+          );
+        }
+        break;
       case ROUTES.FEED:
-        return renderFeedPage();
+        console.log('Rendering FeedPage');
+        pageComponent = renderFeedPage();
+        break;
       case ROUTES.POST:
-        return renderPostPage();
+        console.log('Rendering PostPage');
+        pageComponent = renderPostPage();
+        break;
       case ROUTES.BOT:
-        return renderBotPage();
+        console.log('Rendering BotPage');
+        pageComponent = renderBotPage();
+        break;
       default:
-        return renderHomePage();
+        console.log('Unknown route, defaulting to HomePage');
+        pageComponent = createElement(HomePage);
+        break;
     }
+    
+    // If the page requires wallet and user is not connected, add overlay
+    if (requiresWallet && !state.isConnected) {
+      return createElement('div', { className: 'page-with-overlay' },
+        pageComponent,
+        createElement('div', { className: 'wallet-overlay' },
+          createElement('div', { className: 'wallet-overlay-content' },
+            createElement('h3', null, 'Connect Wallet Required'),
+            createElement('p', null, 'Please connect your wallet to interact with this page.'),
+            createElement('button', {
+              className: 'btn btn-primary',
+              onClick: () => {
+                // Trigger wallet connect
+                const walletConnectBtn = document.querySelector('.btn-primary');
+                if (walletConnectBtn) {
+                  walletConnectBtn.click();
+                }
+              }
+            }, 'Connect Wallet')
+          )
+        )
+      );
+    }
+    
+    return pageComponent;
   };
 
   // Render footer

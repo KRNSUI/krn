@@ -1,13 +1,12 @@
-// public/feed.js
+// src/core/utils/feed.js
 import { censorText } from "./censor.js";
-import { connectWallet, getAddress, payOneKRN } from "./slush.js";
+import { connectWallet, getAddress, payOneKRN } from "../../systems/wallet/slush.js";
 import { fetchStars, postStarToggle } from "./stars.js";
 import { hydrateStarCounts, initStars } from "./stars.js";
 
-
-(() => {
-  const feedEl = document.getElementById("feed");
-  if (!feedEl) return;
+function initFeed(containerId = "feed") {
+  const feedEl = document.getElementById(containerId);
+  if (!feedEl) return null;
 
   /* ---------------- Config for paging ---------------- */
   const FETCH_LIMIT = 50; // how many per page
@@ -342,4 +341,16 @@ async function refreshStarsInView() {
 
   // initial load
   load();
-})();
+  
+  // Return the load function for manual control
+  return { load, refreshStarsInView };
+}
+
+// Auto-init when imported
+if (typeof document !== 'undefined') {
+  document.addEventListener("DOMContentLoaded", () => {
+    initFeed();
+  });
+}
+
+export default initFeed;

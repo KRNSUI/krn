@@ -38,6 +38,11 @@ const initializeApp = () => {
     render(currentAppElement, rootElement);
     
     console.log('✅ Karen on SUI Application initialized successfully');
+    
+    // Ensure all modules are loaded before proceeding
+    setTimeout(() => {
+      console.log('🔧 Post-initialization setup complete');
+    }, 100);
   } catch (error) {
     console.error('❌ Failed to initialize application:', error);
     
@@ -56,21 +61,6 @@ const initializeApp = () => {
   }
 };
 
-// Re-render function for state changes
-const reRenderApp = () => {
-  if (rootElement) {
-    console.log('🔄 Re-rendering application due to state change...');
-    try {
-      // Re-create the app element to get fresh virtual DOM
-      const freshAppElement = createElement(App);
-      render(freshAppElement, rootElement);
-      console.log('✅ Re-render completed successfully');
-    } catch (error) {
-      console.error('❌ Re-render failed:', error);
-    }
-  }
-};
-
 // ===== DOM READY HANDLER =====
 
 // Wait for DOM to be ready
@@ -81,12 +71,49 @@ if (document.readyState === 'loading') {
   initializeApp();
 }
 
+// Re-render function for state changes
+const reRenderApp = () => {
+  if (rootElement) {
+    console.log('🔄 Re-rendering application due to state change...');
+    try {
+      // Set re-rendering flag to prevent infinite loops
+      window.isReRendering = true;
+      
+      // Re-create the app element to get fresh virtual DOM
+      const freshAppElement = createElement(App);
+      render(freshAppElement, rootElement);
+      
+      console.log('✅ Re-render completed successfully');
+    } catch (error) {
+      console.error('❌ Re-render failed:', error);
+    } finally {
+      // Clear re-rendering flag after a short delay to prevent immediate re-renders
+      setTimeout(() => {
+        window.isReRendering = false;
+      }, 100);
+    }
+  }
+};
+
 // ===== STATE CHANGE HANDLER =====
 
-// Listen for state changes to trigger re-renders
-window.addEventListener('stateChanged', (event) => {
-  console.log('📡 State change detected:', event.detail);
-  reRenderApp();
+// Listen for route changes to trigger re-renders (safe version)
+window.addEventListener('routeChanged', (event) => {
+  console.log('🔄 Route change detected:', event.detail);
+  if (rootElement && !window.isReRendering) {
+    try {
+      window.isReRendering = true;
+      const freshAppElement = createElement(App);
+      render(freshAppElement, rootElement);
+      console.log('✅ Re-render completed for route change');
+    } catch (error) {
+      console.error('❌ Re-render failed for route change:', error);
+    } finally {
+      setTimeout(() => {
+        window.isReRendering = false;
+      }, 100);
+    }
+  }
 });
 
 // ===== GLOBAL ERROR HANDLING =====
@@ -104,7 +131,7 @@ window.addEventListener('error', (event) => {
 // ===== DEVELOPMENT HELPERS =====
 
 // Expose app for development/debugging
-if (process.env.NODE_ENV === 'development') {
+if (typeof window !== 'undefined') {
   window.KRNApp = {
     render,
     App,

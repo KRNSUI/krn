@@ -11,7 +11,7 @@ let walletFunctions = null;
 const loadWalletFunctions = async () => {
   if (!walletFunctions) {
     try {
-      walletFunctions = await import('../../../public/slush.js');
+      walletFunctions = await import('./slush.js');
     } catch (error) {
       console.error('Failed to load wallet functions:', error);
       // Provide fallback functions

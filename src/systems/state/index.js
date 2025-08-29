@@ -47,7 +47,7 @@ const createAppState = () => ({
   wallet: createWalletState(),
   content: createContentState(),
   ui: {
-    theme: 'light',
+    theme: 'dark',
     sidebarOpen: false,
     modal: null
   }

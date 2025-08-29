@@ -76,40 +76,119 @@ krn-token-app/
 ├── package.json            # Project configuration
 ├── .gitmodules             # Git submodules configuration
 │
-├── public/                 # Core application files
-│   ├── styles.css          # Unified CSS (includes mobile styles)
-│   ├── chart.js            # KRN token chart functionality
-│   ├── slush.js            # SUI wallet integration
-│   ├── feed.js             # Feed and complaint system
-│   ├── censor.js           # Content censoring
-│   └── stars.js            # Star/favorite system
+├── public/                 # Public assets
+│   └── styles.css          # Unified CSS (includes mobile styles)
 │
 ├── src/                    # FlexNetJSX source code
 │   ├── index.js            # Application entry point
 │   ├── core/               # Core framework
-│   │   ├── runtime/        # Runtime implementation
 │   │   ├── types/          # Type system (Maybe, Either, Result)
-│   │   └── functions/      # Core functions
+│   │   ├── functions/      # Core functions
+│   │   └── utils/          # Core utilities
+│   │       ├── chart.js    # KRN token chart functionality
+│   │       ├── feed.js     # Feed and complaint system
+│   │       ├── censor.js   # Content censoring
+│   │       └── stars.js    # Star/favorite system
 │   └── systems/            # Application systems
-│       ├── render/         # Rendering system (JSX, App, Components)
+│       ├── render/         # Rendering system
+│       │   ├── jsx.js      # Virtual DOM and JSX implementation
+│       │   ├── App.js      # Main application component
+│       │   ├── WalletConnect.js # Wallet connection component
+│       │   ├── ContentFeed.js   # Content feed component
+│       │   └── pages/      # Page components
+│       │       ├── home.js      # Home page
+│       │       ├── about.js     # About page
+│       │       ├── manager.js   # Manager page (krnbot)
+│       │       ├── entitlements.js # File a Complaint page
+│       │       ├── vote.js      # Voting page
+│       │       └── index.js     # Page exports
 │       ├── state/          # State management
 │       ├── wallet/         # SUI wallet integration
+│       │   ├── sui.js      # SUI wallet system
+│       │   └── slush.js    # SUI wallet utilities
 │       └── router/         # Routing system
 │
 ├── krnbot/                 # AI Chat submodule
 │   ├── src/                # Cloudflare Workers AI
+│   └── public/             # krnbot public interface
+│
+├── api/                   # Cloudflare Workers API endpoints
+│   ├── bb.js              # KRN token data API
+│   ├── complaints.js      # Complaints management
+│   ├── submit.js          # Complaint submission
+│   ├── stars/             # Star/favorite system
+│   │   ├── index.js
+│   │   ├── toggle.js
+│   │   └── user.js
+│   ├── chain-txs.js       # Blockchain transactions
+│   ├── diag.js           # Diagnostics
+│   └── status.js         # System status
+│
+├── contracts/              # SUI Move contracts
+└── migrations/             # Database migrations
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- SUI Wallet extension (optional, for full functionality)
+
+### Local Development
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/KRNSUI/krn-token-app.git
+   cd krn-token-app
+   ```
+
+2. **Initialize submodules**
+   ```bash
+   git submodule update --init --recursive
+   ```
+
+3. **Start local server**
+   ```bash
+   # Using Python
+   python3 -m http.server 8080
+   
+   # Using Node.js
+   npx serve .
+   
+   # Using PHP
+   php -S localhost:8080
+   ```
+
+4. **Open in browser**
+   ```
+   http://localhost:8080
+   ```
+
+### Production Deployment
+The application is designed for deployment on **Cloudflare Pages**:
+
+1. **Connect repository** to Cloudflare Pages
+2. **Set build settings**:
+   - Build command: (none required)
+   - Build output directory: `/`
+   - Root directory: `/`
+3. **Configure environment variables** (if needed)
+4. **Deploy**
+
+The application will be available at your Cloudflare Pages URL.
 │   ├── public/             # Chat interface
 │   └── README.md           # Bot documentation
 │
 ├── contracts/              # Smart contracts
 │   └── krn_router.move     # SUI Move router contract
 │
-├── functions/              # Cloudflare functions
-│   ├── bb.js               # KRN token API
-│   ├── complaints.js       # Complaint handling
-│   ├── submit.js           # Form submission
-│   ├── stars/              # Star system
-│   └── ...                 # Other Cloudflare functions
+├── api/                   # Cloudflare Workers API endpoints
+│   ├── bb.js              # KRN token data API
+│   ├── complaints.js      # Complaints management
+│   ├── submit.js          # Complaint submission
+│   ├── stars/             # Star/favorite system
+│   ├── chain-txs.js       # Blockchain transactions
+│   ├── diag.js           # Diagnostics
+│   └── status.js         # System status
 │
 └── migrations/             # Database migrations
     ├── schema.sql          # Main schema

@@ -1,8 +1,7 @@
-// public/chart.js
-(function () {
-  const $ = (sel) => document.querySelector(sel);
+// src/core/utils/chart.js
+const $ = (sel) => document.querySelector(sel);
 
-  async function load() {
+async function load() {
     try {
       const r = await fetch("/bb?hours=24&size=10", { cache: "no-store" });
       const data = await r.json();
@@ -176,6 +175,13 @@ function normalizeTotal(val, decimals) {
       .replaceAll("'", "&#039;");
   }
 
-  // kickoff
+  // Export the load function for manual execution
+  return { load };
+}
+
+// Auto-load when imported
+if (typeof document !== 'undefined') {
   document.addEventListener("DOMContentLoaded", load);
-})();
+}
+
+export default load;

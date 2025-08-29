@@ -1,4 +1,4 @@
-// functions/chain-txs.js
+// api/chain-txs.js
 // GET /chain-txs?coinType=<SUI coin type>&limit=200
 // Proxies Blockberry (POST /sui/v1/coins/{coinType}/transactions) and returns a compact time series.
 

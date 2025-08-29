@@ -25,12 +25,23 @@ const ROUTES = {
 // Guard that requires wallet connection
 const requireWallet = (route) => ({
   ...route,
-  guard: (state) => selectIsConnected(state) 
-    ? Either.Right(route)
-    : Either.Left({ 
-        redirect: ROUTES.HOME, 
-        message: 'Please connect your wallet to access this page' 
-      })
+  guard: (state) => {
+    try {
+      const isConnected = selectIsConnected(state);
+      console.log('Wallet guard check:', { isConnected, state: !!state });
+      // Always allow access to the route, but mark it as requiring wallet
+      return Either.Right({
+        ...route,
+        requiresWallet: !isConnected
+      });
+    } catch (error) {
+      console.error('Wallet guard error:', error);
+      return Either.Right({
+        ...route,
+        requiresWallet: true
+      });
+    }
+  }
 });
 
 // Guard that requires specific permissions
@@ -144,75 +155,103 @@ const Router = {
   
   // Initialize router
   init: () => {
+    console.log('Router init - current pathname:', window.location.pathname);
+    
     // Handle browser back/forward
     window.addEventListener('popstate', (event) => {
+      console.log('Popstate event:', event.state?.path);
       Router.navigate(event.state?.path || '/', false);
     });
     
     // Handle initial route
-    Router.navigate(window.location.pathname, false);
+    const initialPath = window.location.pathname;
+    console.log('Router init - navigating to initial path:', initialPath);
+    Router.navigate(initialPath, false);
   },
   
   // Navigate to route
   navigate: (path, updateHistory = true) => {
-    const route = Router.matchRoute(path);
-    
-    if (route.isLeft()) {
-      const error = route.value;
-      console.warn('Navigation error:', error.message);
+    try {
+      const route = Router.matchRoute(path);
       
-      // Redirect to fallback route
-      if (error.redirect && error.redirect !== path) {
-        Router.navigate(error.redirect, updateHistory);
-        return;
+      if (route.isLeft()) {
+        const error = route.value;
+        console.warn('Navigation error:', error?.message || 'Unknown navigation error');
+        
+        // Redirect to fallback route
+        if (error?.redirect && error.redirect !== path) {
+          Router.navigate(error.redirect, updateHistory);
+          return;
+        }
       }
+    
+          const validRoute = route.fold(
+        () => routeConfig[ROUTES.HOME],
+        (r) => r
+      );
+      
+      // Update browser history
+      if (updateHistory) {
+        window.history.pushState({ path }, validRoute.title, path);
+      }
+      
+      // Update current route
+      Router.currentRoute = validRoute;
+      
+      // Update page title
+      document.title = validRoute.title;
+      
+      // Notify listeners
+      Router.notifyListeners(validRoute);
+      
+      // Add to history
+      Router.history.push({
+        path,
+        timestamp: Date.now(),
+        route: validRoute
+      });
+    } catch (error) {
+      console.error('Router navigation error:', error);
+      // Fallback to home page
+      Router.navigate(ROUTES.HOME, updateHistory);
     }
-    
-    const validRoute = route.fold(
-      () => routeConfig[ROUTES.HOME],
-      (r) => r
-    );
-    
-    // Update browser history
-    if (updateHistory) {
-      window.history.pushState({ path }, validRoute.title, path);
-    }
-    
-    // Update current route
-    Router.currentRoute = validRoute;
-    
-    // Update page title
-    document.title = validRoute.title;
-    
-    // Notify listeners
-    Router.notifyListeners(validRoute);
-    
-    // Add to history
-    Router.history.push({
-      path,
-      timestamp: Date.now(),
-      route: validRoute
-    });
   },
   
   // Match route with guards
   matchRoute: (path) => {
-    const route = Object.values(routeConfig).find(r => r.path === path);
-    
-    if (!route) {
+    try {
+      console.log('🔍 Matching route for path:', path);
+      const route = Object.values(routeConfig).find(r => r.path === path);
+      
+      if (!route) {
+        console.warn('Route not found:', path);
+        return Either.Left({ 
+          redirect: ROUTES.HOME, 
+          message: 'Route not found' 
+        });
+      }
+      
+      console.log('Found route:', route);
+      
+      // Check guards if they exist
+      if (route.guard) {
+        console.log('Route has guard, checking...');
+        const state = getState();
+        console.log('Route guard check:', { path, hasState: !!state, hasGuard: !!route.guard });
+        const guardResult = route.guard(state);
+        console.log('Guard result:', guardResult);
+        return guardResult;
+      }
+      
+      console.log('Route has no guard, returning directly');
+      return Either.Right(route);
+    } catch (error) {
+      console.error('Route matching error:', error);
       return Either.Left({ 
         redirect: ROUTES.HOME, 
-        message: 'Route not found' 
+        message: 'Error matching route' 
       });
     }
-    
-    // Check guards if they exist
-    if (route.guard) {
-      const state = getState();
-      return route.guard(state);
-    }
-    
-    return Either.Right(route);
   },
   
   // Get current route
@@ -223,21 +262,27 @@ const Router = {
   
   // Subscribe to route changes
   subscribe: (listener) => {
+    console.log('Router subscribe - adding listener, current count:', Router.listeners.length);
     Router.listeners.push(listener);
+    console.log('Router subscribe - listener added, new count:', Router.listeners.length);
     
     // Return unsubscribe function
     return () => {
+      console.log('Router unsubscribe - removing listener');
       Router.listeners = Router.listeners.filter(l => l !== listener);
+      console.log('Router unsubscribe - listener removed, new count:', Router.listeners.length);
     };
   },
   
   // Notify listeners
   notifyListeners: (route) => {
-    Router.listeners.forEach(listener => {
+    console.log('Router notifyListeners:', { route, listenerCount: Router.listeners.length });
+    Router.listeners.forEach((listener, index) => {
       try {
+        console.log(`Calling listener ${index}:`, route);
         listener(route);
       } catch (error) {
-        console.error('Router listener error:', error);
+        console.error(`Router listener ${index} error:`, error);
       }
     });
   },

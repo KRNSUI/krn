@@ -1,4 +1,4 @@
-// functions/diag.js
+// api/diag.js
 // GET /diag[?quick=1]
 export const onRequest = async ({ request, env }) => {
   const url = new URL(request.url);
