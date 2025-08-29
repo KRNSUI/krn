@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>KRN Chat</title>
+
+  <!-- $KRN theme tokens + minimal layout -->
+  <style>
+    :root{
+      --bg:#1a0f08;          /* deep blackened brown with orange undertone */
+      --fg:#fff5e6;          /* warm creamy text */
+      --muted:#e0b894;       /* muted tan/orange beige */
+      --card:#26150b;        /* dark roasted brown-orange for cards */
+      --accent:#ff6a00;      /* main vibrant orange */
+      --acc1:#ff6a00;        /* bright flame orange */
+      --acc2:#ff8c1a;        /* vivid pumpkin orange */
+      --acc3:#ffc266;        /* golden honey */
+      --edge:#803300;        /* burnt orange edge line */
+      --glow:0 0 14px rgba(255,106,0,.55), 0 0 24px rgba(255,174,66,.3);
+    }
+    *{ box-sizing:border-box; }
+    html, body{
+      margin:0; height:100%;
+      background:var(--bg);
+      color:var(--fg);
+      font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,sans-serif;
+    }
+
+    /* subtle animated backdrop */
+    body::before{
+      content:"";
+      position:fixed; inset:-20%;
+      background:
+        radial-gradient(800px 500px at 15% 10%, rgba(255,106,0,.25), transparent 55%),
+        radial-gradient(700px 420px at 85% 15%, rgba(255,174,66,.22), transparent 60%),
+        radial-gradient(900px 520px at 50% 120%, rgba(255,194,102,.18), transparent 65%);
+      filter: blur(30px) saturate(120%);
+      animation: drift 18s ease-in-out infinite alternate;
+      z-index:-2;
+    }
+    @keyframes drift{
+      0%{ transform:translate3d(0,0,0) scale(1) }
+      100%{ transform:translate3d(2%, -1%, 0) scale(1.05) }
+    }
+
+    .chat-wrap{
+      display:grid; gap:1rem;
+      grid-template-rows: auto 1fr auto;
+      height: 100vh;
+      padding: 1rem;
+    }
+
+    #log{
+      overflow:auto;
+      padding:.25rem;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.06);
+      background:#0e0a06;
+    }
+
+    .row{ display:flex; margin:.4rem 0; }
+    .row.user{ justify-content:flex-end; }
+    .row.assistant{ justify-content:flex-start; }
+
+    .bubble{
+      max-width: min(720px, 85%);
+      padding:.7rem .85rem;
+      border-radius:14px;
+      line-height:1.45;
+      white-space:pre-wrap;
+      word-wrap:break-word;
+      word-break:break-word;
+    }
+    .bubble.user{
+      background:#0f0906;
+      border:1px solid #4d2a0d;
+    }
+    .bubble.assistant{
+      background:#1f1209;
+      border:1px solid var(--edge);
+    }
+
+    .composer{
+      display:flex; gap:.5rem; align-items:flex-end;
+    }
+    .composer textarea{
+      flex:1; min-height:3.25rem; max-height:32vh;
+      background:#0e0a06; border:1px solid #4d2a0d; color:var(--fg);
+      border-radius:12px; padding:.75rem;
+      resize:vertical;
+    }
+    .btn{
+      display:inline-block; padding:.7rem 1rem; border-radius:14px; border:0;
+      font-weight:800; letter-spacing:.3px; cursor:pointer; color:#1a0f08;
+      background:linear-gradient(135deg,var(--acc1),#ff944d 35%,var(--acc2) 80%);
+      box-shadow: var(--glow);
+      text-decoration:none;
+    }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; }
+
+    .bar{ display:flex; gap:.75rem; align-items:center; }
+    #status{ font-size:.9rem; color:var(--muted); }
+    #error{ font-size:.9rem; color:#ffb4a2; }
+    .hidden{ display:none !important; }
+
+    @media (max-width: 720px){
+      .bubble{ max-width: 92%; }
+    }
+  </style>
+</head>
+<body>
+  <section class="chat-wrap">
+    <!-- Log -->
+    <div id="log" aria-live="polite"></div>
+
+    <!-- Status / errors -->
+    <div class="bar">
+      <span id="status"></span>
+      <span id="error" class="hidden"></span>
+      <span style="flex:1"></span>
+      <button id="clearBtn" class="btn" type="button" title="Clear conversation">Clear</button>
+    </div>
+
+    <!-- Composer -->
+    <div class="composer">
+      <textarea id="input" placeholder="File your complaint. Shift+Enter for newline." spellcheck="true"></textarea>
+      <button id="sendBtn" class="btn" type="button">File a Complaint →</button>
+      <button id="stopBtn" class="btn" type="button" disabled>Stop</button>
+    </div>
+  </section>
+
+  <script type="module" src="./krnbot.js"></script>
+</body>
+</html>
