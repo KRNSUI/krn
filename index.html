@@ -40,7 +40,6 @@
   
   <!-- Styles -->
   <link rel="stylesheet" href="/public/styles.css">
-  <link rel="stylesheet" href="/public/mobile.css">
 </head>
 <body class="theme-dark">
   <!-- Root element for the FlexNetJSX application -->
@@ -54,29 +53,12 @@
     </div>
   </div>
   
-  <!-- Load the FlexNetJSX integration -->
-  <script type="module" src="./src/integration.js"></script>
+  <!-- Load the FlexNetJSX application -->
+  <script type="module" src="./src/index.js"></script>
   
-  <!-- Simple test script -->
-  <script>
-    console.log('🔧 Simple test script is running');
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('📄 DOM is loaded');
-      const root = document.getElementById('root');
-      if (root) {
-        console.log('🎯 Root element found:', root);
-      } else {
-        console.log('❌ Root element not found');
-      }
-    });
-  </script>
+
   
-  <!-- Preserve existing Cloudflare functionality -->
-  <script type="module" src="/public/feed.js"></script>
-  <script src="/public/chart.js" defer></script>
-  <script src="/public/censor.js" type="module"></script>
-  <script type="module" src="/public/slush.js"></script>
-  <script type="module" src="/public/stars.js"></script>
+
   
   <!-- SUI Wallet detection -->
   <script>
