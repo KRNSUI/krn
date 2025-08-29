@@ -58,10 +58,12 @@ const initializeApp = () => {
 
 // Re-render function for state changes
 const reRenderApp = () => {
-  if (rootElement && currentAppElement) {
+  if (rootElement) {
     console.log('🔄 Re-rendering application due to state change...');
     try {
-      render(currentAppElement, rootElement);
+      // Re-create the app element to get fresh virtual DOM
+      const freshAppElement = createElement(App);
+      render(freshAppElement, rootElement);
       console.log('✅ Re-render completed successfully');
     } catch (error) {
       console.error('❌ Re-render failed:', error);
