@@ -17,7 +17,8 @@ const ROUTES = {
   POST: '/post',
   BOT: '/bot',
   PROFILE: '/profile',
-  SETTINGS: '/settings'
+  SETTINGS: '/settings',
+  TERMS: '/terms'
 };
 
 // ===== ROUTE GUARDS =====
@@ -143,7 +144,14 @@ const routeConfig = {
     component: 'SettingsPage',
     title: 'Karen on SUI - Settings',
     public: false
-  })
+  }),
+  
+  [ROUTES.TERMS]: {
+    path: '/terms',
+    component: 'TermsPage',
+    title: 'Karen on SUI - Terms of Service',
+    public: true
+  }
 };
 
 // ===== ROUTER CORE =====

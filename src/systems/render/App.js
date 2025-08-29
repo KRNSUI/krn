@@ -6,12 +6,13 @@ import { subscribe, selectIsConnected, selectUserAddress, selectKRNBalance, sele
 import { Router, ROUTES } from '../router/router.js';
 import { WalletConnect, WalletStatus, KRNBalance } from './WalletConnect.js';
 import { ContentFeed } from './ContentFeed.js';
-import { HomePage, AboutPage, ManagerPage, EntitlementsPage, VotePage } from './pages/index.js';
+import { HomePage, AboutPage, ManagerPage, EntitlementsPage, VotePage, TermsPage } from './pages/index.js';
 
 // ===== MAIN APP COMPONENT =====
 
 const App = () => {
-  console.log('🎭 App component rendering...');
+  // Global variable for modal state (like vote page approach)
+  let showTermsModal = false;
   
   const [state, setState] = useState({
     isConnected: false,
@@ -21,6 +22,8 @@ const App = () => {
     theme: 'dark',
     sidebarOpen: false
   });
+
+  console.log('🎭 App component rendering... showTermsModal:', showTermsModal);
 
   // Subscribe to state changes
   useEffect(() => {
@@ -76,6 +79,242 @@ const App = () => {
   useEffect(() => {
     document.body.className = `theme-${state.theme}`;
   }, [state.theme]);
+
+  // Handle terms modal with direct DOM manipulation
+  const openTermsModal = () => {
+    console.log('Opening terms modal...');
+    
+    // Create modal element directly
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay';
+    modalOverlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(26, 15, 8, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem;';
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = 'background: #26150b; border: 1px solid #803300; border-radius: 12px; padding: 2rem; max-width: 800px; max-height: 80vh; overflow-y: auto; color: #fff5e6; box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 16px rgba(255,106,0,0.25);';
+    modalContent.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #803300;">
+        <h2 style="margin: 0; color: #ff6a00; font-size: 1.8rem;">Terms of Service</h2>
+        <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 2rem; cursor: pointer; color: #e0b894; transition: color 0.2s ease;" onmouseover="this.style.color='#ff6a00'" onmouseout="this.style.color='#e0b894'">×</button>
+      </div>
+      
+      <div style="line-height: 1.6;">
+        
+        <h3>1. Acceptance of Terms</h3>
+        <p>By accessing and using the Karen On SUI platform ("Platform"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.</p>
+        
+        <h3>2. Description of Service</h3>
+        <p>Karen On SUI is a decentralized anonymous complaints platform built on the SUI blockchain that allows users to:</p>
+        <ul>
+          <li>Submit anonymous complaints and content</li>
+          <li>Participate in community moderation through token-backed actions</li>
+          <li>Engage in peer review and integrity scoring</li>
+          <li>Interact with AI-powered chat functionality</li>
+          <li>Use KRN tokens for platform actions</li>
+        </ul>
+        
+        <h3>3. User Responsibilities</h3>
+        <h4>3.1 Anonymous Content</h4>
+        <ul>
+          <li>Users may submit complaints anonymously</li>
+          <li>All content must comply with community standards</li>
+          <li>No personal identifiable information (PII) should be included</li>
+          <li>Content must not violate laws or regulations</li>
+        </ul>
+        
+        <h4>3.2 Token Usage</h4>
+        <ul>
+          <li>KRN tokens are required for certain platform actions</li>
+          <li>Users are responsible for their own wallet security</li>
+          <li>Token transactions are irreversible</li>
+          <li>Platform actions have associated costs in KRN tokens</li>
+        </ul>
+        
+        <h4>3.3 Community Moderation</h4>
+        <ul>
+          <li>Users can participate in content moderation</li>
+          <li>Star and flag actions help maintain community integrity</li>
+          <li>Moderation actions require KRN token expenditure</li>
+          <li>Users should act fairly and responsibly</li>
+        </ul>
+        
+        <h3>4. Platform Features</h3>
+        <h4>4.1 Enhanced Complaint System</h4>
+        <ul>
+          <li>Anonymous complaint submission</li>
+          <li>Advanced pagination and sorting</li>
+          <li>Real-time star and flag interactions</li>
+          <li>Content filtering and moderation</li>
+        </ul>
+        
+        <h4>4.2 AI Chat Integration</h4>
+        <ul>
+          <li>KRN Bot provides AI-powered assistance</li>
+          <li>Chat functionality for platform guidance</li>
+          <li>Real-time streaming responses</li>
+          <li>Community support through AI interaction</li>
+        </ul>
+        
+        <h4>4.3 Blockchain Integration</h4>
+        <ul>
+          <li>Built on SUI blockchain</li>
+          <li>Transparent and immutable records</li>
+          <li>Wallet integration for token management</li>
+          <li>Decentralized governance capabilities</li>
+        </ul>
+        
+        <h3>5. Privacy and Data</h3>
+        <h4>5.1 Anonymous Participation</h4>
+        <ul>
+          <li>Users can participate without revealing identity</li>
+          <li>Optional wallet address association</li>
+          <li>No personal data collection</li>
+          <li>Content is publicly visible but anonymous</li>
+        </ul>
+        
+        <h4>5.2 Blockchain Transparency</h4>
+        <ul>
+          <li>All transactions are publicly visible on SUI blockchain</li>
+          <li>Complaint content is stored on-chain</li>
+          <li>Moderation actions are transparent</li>
+          <li>No private data storage</li>
+        </ul>
+        
+        <h3>6. Token Economics</h3>
+        <h4>6.1 KRN Token Usage</h4>
+        <ul>
+          <li>Stars and flags require KRN token expenditure</li>
+          <li>Content moderation actions have associated costs</li>
+          <li>Token distribution supports platform development</li>
+          <li>Community integrity fund allocation</li>
+        </ul>
+        
+        <h4>6.2 Token Distribution</h4>
+        <ul>
+          <li>30% to Company Treasury</li>
+          <li>5% to Developer Fund</li>
+          <li>5% to Burn (deflationary)</li>
+          <li>60% to Community Integrity Fund</li>
+        </ul>
+        
+        <h3>7. Content Moderation</h3>
+        <h4>7.1 Community Standards</h4>
+        <ul>
+          <li>No harassment or hate speech</li>
+          <li>No illegal content</li>
+          <li>No spam or malicious content</li>
+          <li>Respect for community guidelines</li>
+        </ul>
+        
+        <h4>7.2 Moderation Actions</h4>
+        <ul>
+          <li>Users can flag inappropriate content</li>
+          <li>Community-driven moderation decisions</li>
+          <li>Automatic flagging after threshold</li>
+          <li>Content removal and user banning capabilities</li>
+        </ul>
+        
+        <h3>8. Disclaimers</h3>
+        <h4>8.1 Platform Availability</h4>
+        <ul>
+          <li>Service provided "as is"</li>
+          <li>No guarantee of continuous availability</li>
+          <li>Platform may be modified or discontinued</li>
+          <li>Users responsible for backup of important data</li>
+        </ul>
+        
+        <h4>8.2 Financial Risks</h4>
+        <ul>
+          <li>KRN token values may fluctuate</li>
+          <li><strong>Not financial advice. Tokens are risky; do your own research.</strong></li>
+          <li>Users responsible for their own financial decisions</li>
+          <li>Platform not responsible for token value changes</li>
+        </ul>
+        
+        <h4>8.3 Content Liability</h4>
+        <ul>
+          <li><strong>Submissions are anonymous and user-generated.</strong></li>
+          <li><strong>We do not endorse or verify any content. Do not include personal information, unlawful, or harmful material.</strong></li>
+          <li>Users responsible for their own content</li>
+          <li>Platform does not endorse user content</li>
+          <li>No guarantee of content accuracy</li>
+          <li>Users liable for their submissions</li>
+        </ul>
+        
+        <h3>9. Limitation of Liability</h3>
+        <p>Karen On SUI and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, use, goodwill, or other intangible losses.</p>
+        
+        <h3>10. Indemnification</h3>
+        <p>You agree to defend, indemnify, and hold harmless Karen On SUI from and against any claims, damages, obligations, losses, liabilities, costs, or debt arising from your use of the platform.</p>
+        
+        <h3>11. Governing Law</h3>
+        <p>These Terms shall be governed by and construed in accordance with the laws of the jurisdiction where the platform operates, without regard to its conflict of law provisions.</p>
+        
+        <h3>12. Changes to Terms</h3>
+        <p>Karen On SUI reserves the right to modify these terms at any time. Users will be notified of significant changes, and continued use constitutes acceptance of new terms.</p>
+        
+        <h3>13. Contact Information</h3>
+        <p>For questions about these Terms of Service, please contact the Karen On SUI team through the platform's community channels.</p>
+        
+        <h3>14. Severability</h3>
+        <p>If any provision of these Terms is found to be unenforceable or invalid, that provision will be limited or eliminated to the minimum extent necessary so that the Terms will otherwise remain in full force and effect.</p>
+        
+        <div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #803300; text-align: center;">
+          <p style="font-weight: bold; margin-bottom: 0.5rem; color: #ff6a00;">Karen On SUI - Anonymous Complaint Revolution</p>
+          <p style="font-weight: bold; margin-bottom: 0.5rem; color: #ff6a00;">Built on the SUI Blockchain</p>
+          <p style="font-weight: bold; margin-bottom: 0.5rem; color: #ff6a00;">$KRN Token Ecosystem</p>
+        </div>
+      </div>
+    `;
+    
+    modalOverlay.appendChild(modalContent);
+    
+    // Close on backdrop click
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) {
+        modalOverlay.remove();
+      }
+    });
+    
+    // Close on escape key
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        modalOverlay.remove();
+        document.removeEventListener('keydown', handleEscape);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    
+    document.body.appendChild(modalOverlay);
+    console.log('Modal added to DOM');
+  };
+
+  const closeTermsModal = () => {
+    console.log('Closing terms modal...');
+    const modal = document.querySelector('.modal-overlay');
+    if (modal) {
+      modal.remove();
+    }
+  };
+
+  // Handle escape key for modal
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && state.showTermsModal) {
+        closeTermsModal();
+      }
+    };
+
+    if (state.showTermsModal) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [state.showTermsModal]);
 
   // Render header
   const renderHeader = () => {
@@ -638,6 +877,10 @@ const App = () => {
         console.log('Rendering BotPage');
         pageComponent = renderBotPage();
         break;
+      case ROUTES.TERMS:
+        console.log('Rendering TermsPage');
+        pageComponent = createElement(TermsPage);
+        break;
       default:
         console.log('Unknown route, defaulting to HomePage');
         pageComponent = createElement(HomePage);
@@ -689,7 +932,15 @@ const App = () => {
             href: 'https://t.me/+_o-Osjl6_-g1ZTEx',
             target: '_blank',
             rel: 'noopener'
-          }, 'Telegram')
+          }, 'Telegram'),
+          createElement('a', {
+            href: '#',
+            onClick: (e) => {
+              console.log('Terms of Service link clicked');
+              e.preventDefault();
+              openTermsModal();
+            }
+          }, 'Terms of Service')
         ),
         createElement('p', { className: 'footer-text' }, 
           'Karen on SUI - Anonymous Complaints Platform'
