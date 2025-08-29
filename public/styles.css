@@ -1247,13 +1247,13 @@ a:hover::after{ transform:scaleX(1) }
   .form-col .card {
     flex: 1 1 auto;
     min-height: auto;
-    overflow: hidden !important;
+    overflow: hidden !important;   
   }
   
   .form-col textarea {
-    flex-grow: 1;
+    flex-grow: 1;               
     min-height: 10rem;
-    max-height: 40vh;
+    max-height: 40vh;         
   }
 
   /* RIGHT: feed is the only scroller */
@@ -1261,7 +1261,7 @@ a:hover::after{ transform:scaleX(1) }
     flex: 1 1 auto;
     min-height: auto;
     max-height: 72vh;
-    overflow: auto;
+    overflow: auto;        
   }
   
   /* Optional: avoid layout shift when feed gets a scrollbar */
@@ -1456,7 +1456,7 @@ a:hover::after{ transform:scaleX(1) }
   .form-col .card button[type="submit"],
   .form-col .card .btn {
     width: 100%;
-    display: inline-block;
+  display: inline-block;
     text-align: center;
   }
 }
