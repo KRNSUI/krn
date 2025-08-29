@@ -257,7 +257,7 @@ const App = () => {
           createElement('ul', null,
             createElement('li', null, 'Vote on content moderation'),
             createElement('li', null, 'Propose platform changes'),
-            createElement('li', null, 'Earn rewards for participation')
+            createElement('li', null, 'Build reputation through quality participation')
           )
         ),
         
@@ -347,8 +347,8 @@ const App = () => {
         createElement('div', { className: 'about-section' },
           createElement('h3', null, 'Our Mission'),
           createElement('p', null, 
-            'We believe in the power of anonymous expression while maintaining community standards through token-backed actions. ' +
-            'Every KRN token spent on moderation actions helps fund the platform and rewards content creators.'
+            'We believe in the power of anonymous expression while maintaining community integrity through peer review and token-backed scoring. ' +
+            'Every KRN token spent on moderation actions helps fund the platform and establishes reputation through community consensus.'
           )
         ),
         
@@ -357,9 +357,9 @@ const App = () => {
           createElement('ul', null,
             createElement('li', null, 'Connect your SUI wallet to access the platform'),
             createElement('li', null, 'Post anonymous complaints and content'),
-            createElement('li', null, 'Use KRN tokens to favorite, unfavorite, or flag content'),
-            createElement('li', null, 'Community-driven moderation through token-backed actions'),
-            createElement('li', null, 'Earn rewards by creating quality content')
+            createElement('li', null, 'Use KRN tokens to star, flag, or moderate content'),
+            createElement('li', null, 'Community-driven integrity scoring through peer review'),
+            createElement('li', null, 'Build reputation through quality participation and fair moderation')
           )
         ),
         

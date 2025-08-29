@@ -3,15 +3,15 @@ import { createElement } from '../jsx.js';
 // Voting Page Component
 const VotePage = () => {
   // Use a simple variable instead of useState to avoid re-rendering issues
-  let activeTab = 'favorited';
+  let activeTab = 'starred';
   let selectedItem = null;
   
   // Sample data - in real app this would come from the database
   const voteData = {
-    favorited: [
-      { id: 1, content: 'This complaint has the most favorites', author: '0x1234...5678', favorites: 25, dislikes: 2, flags: 1, strikes: 0 },
-      { id: 2, content: 'Second most favorited complaint', author: '0x8765...4321', favorites: 18, dislikes: 1, flags: 0, strikes: 0 },
-      { id: 3, content: 'Third most favorited complaint', author: '0x1111...2222', favorites: 12, dislikes: 3, flags: 2, strikes: 1 }
+    starred: [
+      { id: 1, content: 'This complaint has the most stars', author: '0x1234...5678', favorites: 25, dislikes: 2, flags: 1, strikes: 0 },
+{ id: 2, content: 'Second most starred complaint', author: '0x8765...4321', favorites: 18, dislikes: 1, flags: 0, strikes: 0 },
+{ id: 3, content: 'Third most starred complaint', author: '0x1111...2222', favorites: 12, dislikes: 3, flags: 2, strikes: 1 }
     ],
     disliked: [
       { id: 4, content: 'This complaint has the most dislikes', author: '0x3333...4444', favorites: 1, dislikes: 15, flags: 8, strikes: 2 },
@@ -42,12 +42,12 @@ const VotePage = () => {
   const renderVoteTabs = () => {
     return createElement('div', { className: 'vote-tabs' },
       createElement('button', {
-        className: `vote-tab ${activeTab === 'favorited' ? 'active' : ''}`,
-        onClick: () => {
-          activeTab = 'favorited';
-          console.log('Switched to favorited tab');
+        className: `vote-tab ${activeTab === 'starred' ? 'active' : ''}`,
+          onClick: () => {
+            activeTab = 'starred';
+          console.log('Switched to starred tab');
         }
-      }, 'Most Favorited'),
+      }, 'Most Starred'),
       createElement('button', {
         className: `vote-tab ${activeTab === 'disliked' ? 'active' : ''}`,
         onClick: () => {
@@ -66,7 +66,9 @@ const VotePage = () => {
   };
 
   const renderVoteItems = () => {
-    const items = voteData[activeTab];
+    const items = activeTab === 'starred' ? voteData.starred : 
+                 activeTab === 'disliked' ? voteData.disliked : 
+                 activeTab === 'flagged' ? voteData.flagged : [];
     
     return createElement('div', { className: 'vote-items' },
       items.map(item => 
@@ -112,7 +114,7 @@ const VotePage = () => {
       createElement('div', { className: 'vote-header' },
         createElement('h3', null, 'Top Voted Content'),
         createElement('p', null, 
-          'Review the most favorited, disliked, and flagged complaints. Take moderation actions using KRN tokens.'
+          'Review the most starred, disliked, and flagged complaints. Take moderation actions using KRN tokens.'
         )
       ),
       

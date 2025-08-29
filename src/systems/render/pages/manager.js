@@ -26,7 +26,7 @@ const ManagerPage = () => {
       
       createElement('div', { className: 'chat-interface' },
         createElement('iframe', {
-          src: '/krnbot/',
+          src: '/krnbot.html',
           title: 'KRN AI Manager Chat',
           className: 'chat-frame',
           width: '100%',

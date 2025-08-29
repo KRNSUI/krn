@@ -10,9 +10,27 @@ A modular, fully functional, no-Node.js web application for Karen on SUI on the 
 ## 🌐 Website
 👉 [Anonymous Complaint Platform](https://krn.fuck-out.com)
 
-- Submit Complaints anonymously.
-- Recent Complaints are displayed publicly.
-- Integrated live chart of the $KRN token on SUI.
+- Submit Complaints anonymously with enhanced features
+- Advanced complaint feed with pagination and sorting
+- Real-time star and flag interactions
+- Integrated live chart of the $KRN token on SUI
+- AI-powered chat with KRN Bot
+
+## 🚀 Quick Start
+
+### For Users
+1. Visit [krn.fuck-out.com](https://krn.fuck-out.com)
+2. Connect your SUI wallet
+3. Submit complaints or interact with existing ones
+4. Use the enhanced feed features (sort, filter, star, flag)
+
+### For Developers
+1. Clone the repository
+2. Deploy the enhanced database schema: `./migrations/deploy_enhanced_schema.sh`
+3. Deploy the KRN Bot: `cd krnbot-integrated && npm run deploy`
+4. Deploy the main application: `wrangler deploy`
+
+See [docs/MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) for detailed migration instructions.
 
 ## 💸 Buy $KRN
 You can purchase $KRN on **Blast.fun**:  
@@ -42,14 +60,24 @@ This application implements the **FlexNetJSX** functional programming architectu
 
 ## 🚀 Features
 
+### Enhanced Complaint System
+The platform now features a comprehensive complaint management system with:
+- **Advanced Pagination** - Newer/Older navigation with cursor-based pagination
+- **Multiple Sort Options** - Sort by newest, oldest, most starred, most flagged
+- **Content Filtering** - Show/hide flagged content
+- **Real-time Interactions** - Star and flag complaints with instant updates
+- **User State Tracking** - Remember which complaints users have interacted with
+- **Content Moderation** - Automatic flagging and filtering system
+- **Performance Optimized** - Database indexes and efficient queries
+
 ### Core Functionality
 - ✅ **SUI Wallet Integration** - Connect to SUI blockchain wallets
 - ✅ **KRN Token Management** - Balance checking and transactions
-- ✅ **Anonymous Content System** - Post complaints anonymously
-- ✅ **Content Moderation** - Censored vs uncensored content
-- ✅ **Token-Powered Actions** - Favorite, unfavorite, and flag with KRN
+- ✅ **Enhanced Anonymous Content System** - Post complaints with advanced features
+- ✅ **Content Moderation** - Built-in filtering and flagging system
+- ✅ **Advanced User Interactions** - Star, flag, and moderate content
 - ✅ **DAO-Controlled Router** - Transparent token distribution
-- ✅ **AI Chat Integration** - KRN-powered LLM chat via krnbot submodule
+- ✅ **AI Chat Integration** - KRN-powered LLM chat with integrated KRN Bot
 - ✅ **Community Governance** - KRN token-based voting system
 - ✅ **Karen Lore** - Mythological origin story and platform identity
 
@@ -57,6 +85,8 @@ This application implements the **FlexNetJSX** functional programming architectu
 - ✅ **Responsive Design** - Works on desktop and mobile
 - ✅ **Theme Support** - Light and dark themes
 - ✅ **Real-time Updates** - Live balance and state updates
+- ✅ **Enhanced Feed** - Pagination, sorting, and filtering
+- ✅ **Interactive Elements** - Star, flag, and reveal functionality
 - ✅ **Error Handling** - Comprehensive error boundaries
 - ✅ **Loading States** - Smooth user experience
 
@@ -86,7 +116,7 @@ krn-token-app/
 │   │   ├── functions/      # Core functions
 │   │   └── utils/          # Core utilities
 │   │       ├── chart.js    # KRN token chart functionality
-│   │       ├── feed.js     # Feed and complaint system
+│   │       ├── feed_enhanced.js # Enhanced feed and complaint system
 │   │       ├── censor.js   # Content censoring
 │   │       └── stars.js    # Star/favorite system
 │   └── systems/            # Application systems
@@ -319,7 +349,7 @@ const paidRoute = requireKRNBalance(1)({
 - **Filter Controls**: All, Censored, Uncensored
 
 ### 4. Token-Powered Actions
-- **Favorite/Unfavorite**: Costs 1 KRN
+- **Star/Unstar**: Costs 1 KRN
 - **Flag Content**: Costs 1 KRN
 - **View Censored**: Costs 1 KRN
 - **AI Chat**: Requires KRN balance
@@ -400,7 +430,7 @@ public entry fun pay<KRN>(
     // - 30% to company wallet
     // - 5% to developer wallet  
     // - 5% to burn vault
-    // - 60% to content creator
+    // - 60% to community integrity fund
 }
 ```
 
@@ -480,10 +510,10 @@ When users spend KRN for actions:
 - **30%** → Company Treasury
 - **5%** → Developer Fund  
 - **5%** → Burn (deflationary)
-- **60%** → Content Creator
+- **60%** → Community Integrity Fund
 
 ### Action Costs
-- **Favorite/Unfavorite**: 1 KRN
+- **Star/Unstar**: 1 KRN
 - **Flag Content**: 1 KRN
 - **View Censored**: 1 KRN
 - **AI Chat**: Variable (based on token packs)
